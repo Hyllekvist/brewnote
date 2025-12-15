@@ -22,7 +22,7 @@ export default function CoffeeProductPage({ params }: { params: { slug: string }
   const name = decodeURIComponent(params.slug).replace(/-/g, " ");
 
   return (
-    <ProductScreenV2
+    <ProductScreen
       name={name}
       meta="Coffee · Origin · Roaster"
       dna={{ acid: 0.45, body: 0.78, sweet: 0.55 }}
