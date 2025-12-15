@@ -1,30 +1,76 @@
-import { buildMetadata } from "@/lib/seo/metadata";
-import { JsonLd } from "@/components/SEO/JsonLd";
-import styles from "./product.module.css";
+import type { Metadata } from "next";
+import { ProductScreen } from "@/components/ProductScreen/ProductScreen";
 
-export const dynamic = "force-dynamic";
-type Props = { params: { slug: string } };
+export const dynamic = "force-static";
 
-export function generateMetadata({ params }: Props) {
-  const title = `Kaffe: ${params.slug.replaceAll("-", " ")}`;
-  return buildMetadata({ title, description: "Kaffe med Brew DNA, opskrifter og brygge-match.", canonical: `/coffees/${params.slug}`, ogImage: "/og/default.svg" });
+export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
+  const name = decodeURIComponent(params.slug).replace(/-/g, " ");
+  return {
+    title: `${name} – BrewNote`,
+    description: `Brew DNA, presets og bryg nu for ${name}.`,
+    alternates: { canonical: `/coffees/${params.slug}` },
+    openGraph: {
+      title: `${name} – BrewNote`,
+      description: `Brew DNA • Scan • Brew Mode`,
+      url: `/coffees/${params.slug}`,
+      images: [{ url: `/api/og` }],
+    },
+  };
 }
 
-export default async function CoffeePage({ params }: Props) {
-  const name = params.slug.replaceAll("-", " ");
-  const jsonLd = { "@context": "https://schema.org", "@type": "Product", name, brand: "Coffee & Tee" };
+export default function CoffeeProductPage({ params }: { params: { slug: string } }) {
+  const title = decodeURIComponent(params.slug).replace(/-/g, " ");
 
+  // TODO: senere: hent fra Supabase
   return (
-    <div className={styles.wrap}>
-      <JsonLd data={jsonLd} />
-      <h1 className={styles.h1}>{name}</h1>
-      <p className={styles.p}>Her kommer Brew DNA, opskrifter, reviews og “bryg nu”. Kobl på Supabase senere.</p>
-      <div className={styles.dna}>
-        <div className={styles.dnaTitle}>Brew DNA</div>
-        <div className={styles.dnaRow}><span>Syre</span><span className={styles.bar}><i style={{ width: "35%" }} /></span></div>
-        <div className={styles.dnaRow}><span>Krop</span><span className={styles.bar}><i style={{ width: "70%" }} /></span></div>
-        <div className={styles.dnaRow}><span>Sødme</span><span className={styles.bar}><i style={{ width: "45%" }} /></span></div>
-      </div>
-    </div>
+    <ProductScreen
+      title={title}
+      subtitle="Coffee • Origin • Roaster"
+      imageUrl={undefined}
+      dna={{ acid: 0.45, body: 0.78, sweet: 0.55 }}
+      primaryCta={{
+        label: "BRYG NU",
+        hint: "Anbefalet opskrift • 2:45",
+        href: `/brew?type=coffee&slug=${encodeURIComponent(params.slug)}`,
+      }}
+      presets={[
+        {
+          id: "espresso",
+          label: "Espresso",
+          sub: "Fyldig",
+          brewTime: "0:30",
+          methodKey: "espresso",
+          dnaMini: { acid: 0.35, body: 0.85, sweet: 0.55 },
+        },
+        {
+          id: "pourover",
+          label: "Pour-over",
+          sub: "Balanceret",
+          brewTime: "2:45",
+          methodKey: "pourover",
+          dnaMini: { acid: 0.50, body: 0.65, sweet: 0.55 },
+        },
+        {
+          id: "coldbrew",
+          label: "Cold brew",
+          sub: "Sød & smooth",
+          brewTime: "12h",
+          methodKey: "coldbrew",
+          dnaMini: { acid: 0.25, body: 0.60, sweet: 0.75 },
+        },
+      ]}
+      tasteChips={[
+        { label: "chokolade", count: 337 },
+        { label: "ristet", count: 188 },
+        { label: "karamel", count: 142 },
+        { label: "mørk frugt", count: 120 },
+        { label: "vanilje", count: 98 },
+      ]}
+      secondary={{
+        addToBarHref: `/bar?add=${encodeURIComponent(params.slug)}`,
+        reviewsHref: `/coffees/${encodeURIComponent(params.slug)}#reviews`,
+        editHref: `/coffees/${encodeURIComponent(params.slug)}#edit`,
+      }}
+    />
   );
 }
