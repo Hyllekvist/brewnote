@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import styles from "./BrewClient.module.css";
-import { getRecipe } from "@/lib/brew/recipes";
-import type { BrewType } from "@/lib/brew/types";
+
+type Step = {
+  id: string;
+  label: string;
+  instruction: string;
+  targetG?: number;
+  seconds?: number;
+};
 
 function formatMMSS(total: number) {
   const m = Math.floor(total / 60);
@@ -11,322 +17,180 @@ function formatMMSS(total: number) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function clamp(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
+function formatTenth(ms: number) {
+  const totalSeconds = ms / 1000;
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${String(m).padStart(2, "0")}:${s.toFixed(1).padStart(4, "0")}`;
 }
 
 export default function BrewClient({ type, slug }: { type: string; slug: string }) {
-  const brewType: BrewType = type === "tea" ? "tea" : "coffee";
-  const recipe = useMemo(() => getRecipe(brewType), [brewType]);
-
   const title = useMemo(() => {
     const name = slug ? decodeURIComponent(slug).replace(/-/g, " ") : "Brew Mode";
-    return brewType === "tea" ? `Tea Brew — ${name}` : `Coffee Brew — ${name}`;
-  }, [brewType, slug]);
+    return type === "tea" ? `Tea Brew — ${name}` : `Coffee Brew — ${name}`;
+  }, [type, slug]);
 
-  const totalSeconds = recipe.totalSeconds;
+  // v2: stadig hardcoded flow – men UI matcher “rigtig bryg”
+  const steps: Step[] = useMemo(
+    () => [
+      { id: "prep", label: "Prep", instruction: "Skyl filter + varm server/kop. Nulstil vægt.", seconds: 20 },
+      { id: "bloom", label: "Bloom", instruction: "Hæld til alle grunde er mættede.", targetG: 50, seconds: 35 },
+      { id: "pour1", label: "Pour 1", instruction: "Hæld stabilt i cirkler. Hold flowet roligt.", targetG: 150, seconds: 40 },
+      { id: "pour2", label: "Pour 2", instruction: "Top op til slutvægt. Stop og lad dræne færdigt.", targetG: 300, seconds: 55 },
+      { id: "finish", label: "Finish", instruction: "Ryst let / swirl. Smag og log resultat.", seconds: 25 },
+    ],
+    []
+  );
+
+  const totalSeconds = useMemo(() => steps.reduce((acc, s) => acc + (s.seconds || 0), 0), [steps]);
 
   const [idx, setIdx] = useState(0);
   const [running, setRunning] = useState(false);
+  const [ms, setMs] = useState(0);
+  const [showSteps, setShowSteps] = useState(false);
 
-  // “Vægt” v1 (manuel input indtil hardware)
-  const [currentG, setCurrentG] = useState(0);
-
-  // Total elapsed (sekunder)
-  const [elapsed, setElapsed] = useState(0);
-
-  // Quick adjust hint (sur/bitter)
-  const [adjustHint, setAdjustHint] = useState<string | null>(null);
-
-  // timer
-  useEffect(() => {
-    if (!running) return;
-    const t = setInterval(() => {
-      setElapsed((p) => clamp(p + 1, 0, totalSeconds));
-    }, 1000);
-    return () => clearInterval(t);
-  }, [running, totalSeconds]);
-
-  const steps = recipe.steps;
   const current = steps[idx];
 
-  const stepStart = useMemo(() => {
-    let s = 0;
-    for (let i = 0; i < idx; i++) s += steps[i].seconds || 0;
-    return s;
-  }, [idx, steps]);
+  // v2: rigtig timer (ikke vægt-sensor endnu, men UI er “klar” til det)
+  useEffect(() => {
+    if (!running) return;
+    const t = setInterval(() => setMs((v) => v + 100), 100);
+    return () => clearInterval(t);
+  }, [running]);
 
+  // Progress ring: hvis step har seconds => brug elapsed i step,
+  // ellers brug “progress pr. step” så ringen altid føles levende.
   const stepSeconds = current.seconds || 0;
-  const stepElapsed = clamp(elapsed - stepStart, 0, stepSeconds || 0);
-  const stepRemaining = Math.max(0, stepSeconds - stepElapsed);
+  const stepProgress = stepSeconds > 0 ? Math.min(1, (ms / 1000) / stepSeconds) : (idx + 1) / steps.length;
 
-  // Hybrid progress:
-  // - pour steps: grams progress (currentG/targetG) if target exists
-  // - else: time progress (stepElapsed/stepSeconds)
-  const progress01 = useMemo(() => {
-    if (current.targetG && current.kind === "pour") {
-      return clamp(currentG / current.targetG, 0, 1);
-    }
-    if (stepSeconds > 0) return clamp(stepElapsed / stepSeconds, 0, 1);
-    return 0;
-  }, [current.kind, current.targetG, currentG, stepElapsed, stepSeconds]);
+  // “Weight progress” mock: fyld op til targetG (kun til UI). 0..1
+  const target = current.targetG || 0;
+  const weightProgress = target ? Math.min(1, stepProgress) : 0;
+  const shownWeight = target ? Math.round(target * weightProgress) : 0;
 
-  const progressDeg = Math.round(progress01 * 360);
+  const ringDeg = Math.round(weightProgress * 360);
 
-  // “Hvad gør jeg nu?” + “Hvornår færdig?”
-  const nowLine = useMemo(() => {
-    if (current.targetG && current.kind === "pour") {
-      const left = Math.max(0, current.targetG - currentG);
-      return left <= 0 ? `Mål nået (${current.targetG}g)` : `Manglende: ${left}g`;
-    }
-    return stepSeconds ? `Tilbage: ${formatMMSS(stepRemaining)}` : "—";
-  }, [current, currentG, stepRemaining, stepSeconds]);
+  const goPrev = () => setIdx((p) => Math.max(0, p - 1));
+  const goNext = () => setIdx((p) => Math.min(steps.length - 1, p + 1));
 
-  const canPrev = idx > 0;
-  const canNext = idx < steps.length - 1;
-
-  function goPrev() {
-    setIdx((p) => Math.max(0, p - 1));
+  // Når man skifter step: reset step-timer for at føles som en rigtig guide
+  useEffect(() => {
+    setMs(0);
     setRunning(false);
-  }
-
-  function goNext() {
-    setIdx((p) => Math.min(steps.length - 1, p + 1));
-    setRunning(false);
-  }
-
-  function jumpTo(i: number) {
-    setIdx(clamp(i, 0, steps.length - 1));
-    setRunning(false);
-  }
-
-  function resetForThisStep() {
-    // small quality-of-life: reset grams for steps that have a target
-    if (current.targetG && current.kind === "pour") setCurrentG(0);
-  }
-
-  const maxSlider = recipe.waterG || 400;
+  }, [idx]);
 
   return (
     <main className={styles.page}>
+      {/* top bar (minimal) */}
       <header className={styles.topBar}>
-        <a
-          className={styles.back}
-          href={slug ? `/coffees/${encodeURIComponent(slug)}` : "/"}
-          aria-label="Tilbage"
-        >
-          ←
+        <a className={styles.iconBtn} href={slug ? `/coffees/${encodeURIComponent(slug)}` : "/"} aria-label="Tilbage">
+          ‹
         </a>
 
-        <div className={styles.topTitle}>
+        <div className={styles.topCenter}>
           <div className={styles.kicker}>BREW MODE</div>
-          <div className={styles.h1}>{title}</div>
+          <div className={styles.h1} title={title}>{title}</div>
         </div>
 
-        <button className={styles.close} onClick={() => history.back()} aria-label="Luk">
+        <button className={styles.iconBtn} onClick={() => history.back()} aria-label="Luk">
           ✕
         </button>
       </header>
 
-      <section className={styles.deviceCard}>
-        {/* Brew Card (metoden + hvorfor) */}
-        <div className={styles.brewCard}>
-          <div className={styles.brewCardTop}>
-            <div>
-              <div className={styles.brewMethod}>{recipe.method}</div>
-              <div className={styles.brewWhy}>{recipe.why}</div>
-            </div>
-
-            <div className={styles.brewFacts}>
-              <div className={styles.fact}>
-                <span className={styles.factLabel}>Ratio</span>
-                <span className={styles.factVal}>{recipe.ratioText}</span>
-              </div>
-              <div className={styles.fact}>
-                <span className={styles.factLabel}>Grind</span>
-                <span className={styles.factVal}>{recipe.grindText}</span>
-              </div>
-              <div className={styles.fact}>
-                <span className={styles.factLabel}>Temp</span>
-                <span className={styles.factVal}>{recipe.tempText}</span>
-              </div>
-              <div className={styles.fact}>
-                <span className={styles.factLabel}>Total</span>
-                <span className={styles.factVal}>{formatMMSS(totalSeconds)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick adjust */}
-          <div className={styles.adjustRow}>
-            <button
-              className={styles.adjustBtn}
-              onClick={() =>
-                setAdjustHint("For sur → finere grind, +1–2°C, længere bloom (10–15s).")
-              }
-              type="button"
-            >
-              For sur?
-            </button>
-            <button
-              className={styles.adjustBtn}
-              onClick={() =>
-                setAdjustHint("For bitter → grovere grind, -1–2°C, kortere total (10–20s).")
-              }
-              type="button"
-            >
-              For bitter?
-            </button>
-            <button className={styles.adjustBtnGhost} onClick={() => setAdjustHint(null)} type="button">
-              Nulstil
-            </button>
-          </div>
-
-          {adjustHint ? <div className={styles.adjustHint}>{adjustHint}</div> : null}
+      {/* main “one screen” stage */}
+      <section className={styles.stage} aria-label="Brew stage">
+        {/* timer */}
+        <div className={styles.timerRow}>
+          <div className={styles.timer}>{formatTenth(ms)}</div>
+          <button className={styles.stepsPill} onClick={() => setShowSteps(true)} type="button">
+            {idx + 1}/{steps.length} · {current.label}
+          </button>
         </div>
 
-        {/* Main hero ring */}
-        <div className={styles.ringWrap}>
-          <div className={styles.ringArea}>
-            <div className={styles.sideStat}>
-              <div>
-                <div className={styles.sideLabel}>NU</div>
-                <div className={styles.sideValue}>{nowLine}</div>
+        {/* dial */}
+        <div className={styles.dialWrap}>
+          <div className={styles.dialOuter}>
+            <div
+              className={styles.dialRing}
+              style={{
+                background: `conic-gradient(var(--accent1) 0deg ${ringDeg}deg, rgba(255,255,255,.10) ${ringDeg}deg 360deg)`,
+              }}
+            />
+            <div className={styles.dialInner}>
+              <div className={styles.weightBig}>
+                {target ? `${shownWeight.toLocaleString("da-DK")},0 g` : "—"}
               </div>
-            </div>
 
-            <div className={styles.ring}>
-              <div
-                className={styles.pie}
-                style={{
-                  background: `conic-gradient(var(--ok) 0deg ${progressDeg}deg, rgba(255,255,255,.10) ${progressDeg}deg 360deg)`,
-                }}
-              />
-              <div className={styles.readout}>
-                <div className={styles.big}>
-                  {current.targetG && current.kind === "pour" ? `${current.targetG}g` : formatMMSS(stepRemaining)}
-                </div>
-                <div className={styles.subRow}>
-                  <div>
-                    <span className={styles.subK}>WEIGHT</span>{" "}
-                    <strong>{currentG}g</strong>
-                  </div>
-                  <div>
-                    <span className={styles.subK}>FLOW</span>{" "}
-                    <strong>3.5g/s</strong>
+              <div className={styles.metrics}>
+                <div className={styles.metric}>
+                  <div className={styles.metricLabel}>WEIGHT</div>
+                  <div className={styles.metricVal}>
+                    {target ? `${shownWeight.toLocaleString("da-DK")},0 g` : "—"}
                   </div>
                 </div>
-              </div>
-            </div>
-
-            <div className={`${styles.sideStat} ${styles.sideStatRight}`}>
-              <div>
-                <div className={styles.sideLabel}>STEP</div>
-                <div className={styles.sideValue}>
-                  {idx + 1}/{steps.length} · {current.label}
+                <div className={styles.metric}>
+                  <div className={styles.metricLabel}>FLOW RATE</div>
+                  <div className={styles.metricVal}>0 g/s</div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className={styles.stepMeta}>
-            <div className={styles.stepIndex}>
-              {idx + 1}/{steps.length}
-            </div>
-            <button className={styles.smallLink} onClick={resetForThisStep} type="button">
-              Nulstil step
-            </button>
-          </div>
+          {/* small action bubble (placeholder for “pour mode” etc.) */}
+          <button className={styles.fab} type="button" aria-label="Brew tools">
+            ⏱
+          </button>
+        </div>
 
-          <p className={styles.stepText}>{current.instruction}</p>
+        {/* instruction */}
+        <div className={styles.instruction}>
+          {current.targetG
+            ? `Hæld ${current.targetG}g vand – ${current.instruction}`
+            : current.instruction}
+        </div>
 
-          {/* Manual grams controls (only show when it matters) */}
-          {current.targetG && current.kind === "pour" ? (
-            <div className={styles.gramsCard}>
-              <div className={styles.gramsTop}>
-                <div className={styles.gramsTitle}>Jeg er på</div>
-                <div className={styles.gramsValue}>{currentG}g</div>
-              </div>
+        {/* dots */}
+        <div className={styles.dots} aria-label="Step progress">
+          {steps.map((s, i) => (
+            <button
+              key={s.id}
+              type="button"
+              className={i === idx ? styles.dotActive : styles.dot}
+              onClick={() => setIdx(i)}
+              aria-label={`Gå til ${s.label}`}
+            />
+          ))}
+        </div>
 
-              <input
-                className={styles.slider}
-                type="range"
-                min={0}
-                max={maxSlider}
-                value={currentG}
-                onChange={(e) => setCurrentG(Number(e.target.value))}
-              />
-
-              <div className={styles.gramsBtns}>
-                <button className={styles.btn} onClick={() => setCurrentG((g) => clamp(g - 5, 0, maxSlider))} type="button">
-                  − 5g
-                </button>
-                <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => setCurrentG((g) => clamp(g + 5, 0, maxSlider))} type="button">
-                  + 5g
-                </button>
-                <button className={styles.btn} onClick={() => setCurrentG(0)} type="button">
-                  0
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-          {/* Controls */}
+        {/* controls pinned */}
+        <div className={styles.controlsDock}>
           <div className={styles.controls}>
-            <button className={styles.btn} onClick={goPrev} disabled={!canPrev} type="button">
-              ← Forrige
+            <button className={styles.ctrlBtn} onClick={goPrev} disabled={idx === 0} type="button" aria-label="Forrige">
+              ‹
             </button>
 
             <button
-              className={`${styles.btn} ${styles.btnPrimary}`}
+              className={styles.ctrlBtnCenter}
               onClick={() => setRunning((v) => !v)}
               type="button"
+              aria-label={running ? "Pause" : "Start"}
             >
-              {running ? "Pause" : "Start"}
+              {running ? "Ⅱ" : "▶"}
             </button>
 
-            <button className={styles.btn} onClick={goNext} disabled={!canNext} type="button">
-              Næste →
+            <button className={styles.ctrlBtn} onClick={goNext} disabled={idx === steps.length - 1} type="button" aria-label="Næste">
+              ›
             </button>
           </div>
 
-          {/* Rail */}
-          <div className={styles.railWrap}>
-            <div className={styles.railMeta}>
-              <strong>Steps</strong>
-              <span>Total {formatMMSS(totalSeconds)}</span>
-            </div>
-
-            <div className={styles.rail} aria-label="Steps">
-              {steps.map((s, i) => {
-                const active = i === idx;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className={active ? `${styles.stepChip} ${styles.stepChipActive}` : styles.stepChip}
-                    onClick={() => jumpTo(i)}
-                  >
-                    <div className={styles.stepChipTop}>
-                      <span>{i + 1}</span>
-                      <span>{s.seconds ? `${s.seconds}s` : "—"}</span>
-                    </div>
-                    <div className={styles.stepChipMid}>{s.label}</div>
-                    <div className={styles.stepChipBottom}>
-                      {s.targetG ? `${s.targetG}g` : "—"}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className={styles.bottomActions}>
-            <button className={styles.flatBtn} type="button">Log resultat</button>
-            <button className={styles.flatBtn} type="button">Gem som preset</button>
+          <div className={styles.metaRow}>
+            <span>Total {formatMMSS(totalSeconds)}</span>
+            <button className={styles.linkBtn} onClick={() => setShowSteps(true)} type="button">
+              Alle steps
+            </button>
           </div>
         </div>
       </section>
-    </main>
-  );
-}
+
+      {/* bottom sheet for steps (so you keep “no scroll” feel) */}
+      <div className={showSteps ? styles.sheetBackdrop : styles.sheetBackdropHidden}
