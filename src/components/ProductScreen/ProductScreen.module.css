@@ -1,0 +1,312 @@
+.page{
+  padding-bottom: 96px;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+/* ---------- HERO ---------- */
+.hero{
+  position: relative;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 18px 14px 0;
+}
+
+.heroBg{
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(900px 520px at 20% 0%, rgba(255,94,98,0.20), transparent 55%),
+    radial-gradient(720px 460px at 90% 10%, rgba(255,153,102,0.16), transparent 60%),
+    linear-gradient(to bottom, rgba(0,0,0,0.55), rgba(0,0,0,0));
+  filter: blur(0px);
+  pointer-events:none;
+  border-bottom-left-radius: 22px;
+  border-bottom-right-radius: 22px;
+}
+
+.heroMedia{
+  position: relative;
+  height: 270px;
+  border-radius: 22px;
+  overflow:hidden;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.45);
+}
+
+.heroImg{
+  object-fit: cover;
+  transform: scale(1.02);
+  filter: saturate(1.05) contrast(1.05);
+}
+
+.heroFallback{
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(520px 340px at 30% 20%, rgba(255,94,98,0.22), transparent 60%),
+    radial-gradient(520px 340px at 70% 10%, rgba(255,153,102,0.18), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,0.05), rgba(0,0,0,0));
+}
+
+.heroVignette{
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(80% 70% at 50% 30%, transparent 20%, rgba(0,0,0,0.55) 100%),
+    linear-gradient(to bottom, rgba(0,0,0,0.0), rgba(0,0,0,0.62));
+  pointer-events:none;
+}
+
+.heroText{
+  margin-top: 14px;
+  padding: 0 2px;
+}
+
+.kicker{
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.70;
+}
+
+.h1{
+  margin: 6px 0 0;
+  font-size: 34px;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+/* ---------- CORE: DNA + CTA ---------- */
+.core{
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 14px 14px 0;
+  display: grid;
+  gap: 12px;
+}
+
+.dnaCard{
+  border-radius: 22px;
+  padding: 16px 16px 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 14px 42px rgba(0,0,0,0.35);
+}
+
+.dnaTop{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.dnaTitle{
+  font-size: 15px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.dnaSub{
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.dnaSvg{
+  display:block;
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.35));
+}
+
+.dnaLegend{
+  margin-top: 10px;
+  font-size: 12px;
+  opacity: 0.70;
+  display:flex;
+  align-items:center;
+  gap: 8px;
+}
+
+.legendDot{
+  width:10px;
+  height:10px;
+  border-radius: 99px;
+  background: linear-gradient(135deg, var(--accent1), var(--accent2));
+  box-shadow: 0 8px 18px rgba(255,94,98,0.22);
+}
+
+.sep{ opacity:0.45; }
+
+/* Primary CTA */
+.primaryCta{
+  border-radius: 18px;
+  padding: 16px 16px 14px;
+  text-decoration:none;
+  color: #0b0d10;
+  background: linear-gradient(135deg, var(--accent1), var(--accent2));
+  box-shadow: 0 18px 44px rgba(255,94,98,0.22);
+  display:flex;
+  align-items:flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.primaryLabel{
+  font-size: 16px;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+}
+
+.primaryHint{
+  font-size: 12px;
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
+/* ---------- SECTION ---------- */
+.section{
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 14px 14px 0;
+}
+
+.sectionHead{
+  display:flex;
+  align-items:flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.h2{
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+
+.sectionSub{
+  font-size: 12px;
+  opacity: 0.60;
+}
+
+/* Presets */
+.presetRow{
+  display:flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: none;
+}
+.presetRow::-webkit-scrollbar{ display:none; }
+
+.presetCard{
+  min-width: 220px;
+  border-radius: 18px;
+  padding: 14px;
+  text-decoration:none;
+  color: var(--ink);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.28);
+}
+
+.presetTop{
+  display:flex;
+  align-items:flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.presetLabel{
+  font-size: 14px;
+  font-weight: 760;
+}
+
+.presetSub{
+  margin-top: 2px;
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.presetTime{
+  font-size: 12px;
+  opacity: 0.75;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.30);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.dnaMini{
+  margin-top: 12px;
+  opacity: 0.95;
+}
+
+.presetGhost{
+  margin-top: 16px;
+  height: 68px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Chips */
+.chips{
+  display:flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 13px;
+}
+
+.chipCount{
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+/* Secondary actions */
+.secondaryRow{
+  display:flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.secondaryBtn{
+  text-decoration:none;
+  color: var(--ink);
+  font-size: 13px;
+  padding: 11px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Bottom fade (nice on mobile) */
+.bottomFade{
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 96px;
+  pointer-events:none;
+  background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.65));
+}
+
+/* Mobile tighten */
+@media (max-width: 640px){
+  .hero{ padding: 14px 12px 0; }
+  .core, .section{ padding-left: 12px; padding-right: 12px; }
+  .heroMedia{ height: 240px; }
+  .h1{ font-size: 30px; }
+}
