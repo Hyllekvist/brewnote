@@ -4,41 +4,14 @@ import { useMemo, useState } from "react";
 import styles from "./ProductScreen.module.css";
 
 type BrewDNA = { acid: number; body: number; sweet: number };
-
-type BrewPreset = {
-  id: string;
-  method: string;
-  description: string;
-  time: string;
-  // social proof pr preset (valgfri)
-  popularityPct?: number; // 0-100
-};
-
 type TasteNote = { label: string; count: number };
-
-type MatchState = "like" | "dislike" | "neutral";
+type BrewVariation = { id: string; method: string; description: string; time: string };
 
 type Props = {
   name: string;
-  meta: string; // "Coffee · Origin · Roaster"
+  meta: string;
+
   dna: BrewDNA;
-
-  // ✅ personlig match (Vivino-lag)
-  user?: {
-    matchPct?: number; // 0-100
-    state?: MatchState; // like/dislike/neutral
-  };
-
-  // ✅ social proof (Vivino-lag)
-  crowd?: {
-    ratingsCount?: number; // “baseret på X”
-    topPctWorld?: number; // top X% i verden
-    topPctCategory?: number; // top X% i kategori
-    mostBrewed?: { method: string; pct: number }; // “Mest brygget som”
-  };
-
-  // ✅ brugssituationer (Vivino-lag)
-  moments?: string[]; // fx ["Morgen", "Eftermiddag", "Dessert", "Fokus"]
 
   tasteSummary: string;
   tasteNotes: TasteNote[];
@@ -50,238 +23,264 @@ type Props = {
     href: string;
   };
 
-  variations: BrewPreset[];
+  variations: BrewVariation[];
 };
 
-function clamp01(n: number) {
-  return Math.max(0, Math.min(1, n));
-}
-
-function dnaToPieAngles(dna: BrewDNA) {
-  const a = clamp01(dna.acid);
-  const b = clamp01(dna.body);
-  const s = clamp01(dna.sweet);
-  const sum = a + b + s || 1;
-  return {
-    acid: (a / sum) * 360,
-    body: (b / sum) * 360,
-    sweet: (s / sum) * 360,
-  };
-}
+type Tab = "overview" | "brew" | "reviews" | "learn";
 
 export default function ProductScreen({
   name,
   meta,
   dna,
-  user,
-  crowd,
-  moments,
   tasteSummary,
   tasteNotes,
   recommendedBrew,
   variations,
 }: Props) {
-  const [matchState, setMatchState] = useState<MatchState>(user?.state || "neutral");
+  const [tab, setTab] = useState<Tab>("overview");
+  const [preference, setPreference] = useState<"like" | "dislike" | null>(null);
 
-  const angles = useMemo(() => dnaToPieAngles(dna), [dna]);
+  // Stub-data (skiftes til Supabase senere)
+  const rating = useMemo(() => ({ score: 4.3, count: 5072 }), []);
+  const match = useMemo(() => 52, []);
 
-  const matchPct = user?.matchPct;
-  const showMatch = typeof matchPct === "number";
+  const dnaBg = useMemo(() => {
+    const bodyDeg = Math.max(0, Math.min(1, dna.body)) * 360;
+    const acidDeg = Math.max(0, Math.min(1, dna.acid)) * 360;
+    const sweetDeg = Math.max(0, Math.min(1, dna.sweet)) * 360;
+
+    // Normaliser så de summer til 360 (giver pæn pie)
+    const sum = bodyDeg + acidDeg + sweetDeg || 360;
+    const b = (bodyDeg / sum) * 360;
+    const a = (acidDeg / sum) * 360;
+    const s = 360 - b - a;
+
+    return `conic-gradient(
+      var(--accent2) 0deg ${b}deg,
+      var(--accent1) ${b}deg ${b + a}deg,
+      rgba(255,255,255,.14) ${b + a}deg 360deg
+    )`;
+  }, [dna]);
 
   return (
     <main className={styles.page}>
       {/* HERO */}
-      <section className={styles.hero}>
+      <header className={styles.hero}>
         <div className={styles.heroTexture} />
         <div className={styles.heroContent}>
           <div className={styles.meta}>{meta}</div>
           <h1 className={styles.title}>{name}</h1>
 
-          {/* ✅ PERSONLIG MATCH (Vivino “Match for dig”) */}
-          {showMatch ? (
-            <div className={styles.matchRow}>
-              <div className={styles.matchBadge} aria-label="Match for dig">
-                <span className={styles.matchPct}>{matchPct}%</span>
-                <span className={styles.matchLabel}>Match for dig</span>
+          {/* Rating + Match (Vivino-feel) */}
+          <div className={styles.heroStats}>
+            <div className={styles.ratingBlock}>
+              <div className={styles.ratingScore}>{rating.score.toFixed(1).replace(".", ",")}</div>
+              <div className={styles.stars} aria-label={`${rating.score} ud af 5`}>
+                ★★★★☆
+              </div>
+              <div className={styles.ratingCount}>{rating.count.toLocaleString("da-DK")} bedømmelser</div>
+            </div>
+
+            <div className={styles.matchBlock}>
+              <div className={styles.matchPill}>
+                <span className={styles.matchDot} />
+                <strong>{match}%</strong>
+                <span>Match for dig</span>
               </div>
 
               <div className={styles.matchActions}>
                 <button
                   type="button"
-                  className={`${styles.matchBtn} ${matchState === "like" ? styles.matchBtnActive : ""}`}
-                  onClick={() => setMatchState(matchState === "like" ? "neutral" : "like")}
+                  className={preference === "like" ? styles.active : ""}
+                  onClick={() => setPreference(preference === "like" ? null : "like")}
                 >
                   Jeg kan godt lide
                 </button>
                 <button
                   type="button"
-                  className={`${styles.matchBtn} ${matchState === "dislike" ? styles.matchBtnActive : ""}`}
-                  onClick={() => setMatchState(matchState === "dislike" ? "neutral" : "dislike")}
+                  className={preference === "dislike" ? styles.active : ""}
+                  onClick={() => setPreference(preference === "dislike" ? null : "dislike")}
                 >
                   Jeg kan ikke lide
                 </button>
               </div>
             </div>
-          ) : null}
+          </div>
+        </div>
+      </header>
 
-          {/* ✅ SOCIAL PROOF: ranking + counts */}
-          {(crowd?.ratingsCount || crowd?.topPctWorld || crowd?.topPctCategory) ? (
-            <div className={styles.proofRow}>
-              {typeof crowd?.ratingsCount === "number" ? (
-                <div className={styles.proofPill}>
-                  Baseret på <strong>{crowd.ratingsCount.toLocaleString("da-DK")}</strong> bryg
-                </div>
-              ) : null}
+      {/* Tabs */}
+      <nav className={styles.tabs} aria-label="Produkt navigation">
+        <button type="button" className={tab === "overview" ? styles.tabActive : styles.tab} onClick={() => setTab("overview")}>
+          Overblik
+        </button>
+        <button type="button" className={tab === "brew" ? styles.tabActive : styles.tab} onClick={() => setTab("brew")}>
+          Bryg
+        </button>
+        <button type="button" className={tab === "reviews" ? styles.tabActive : styles.tab} onClick={() => setTab("reviews")}>
+          Vurderinger
+        </button>
+        <button type="button" className={tab === "learn" ? styles.tabActive : styles.tab} onClick={() => setTab("learn")}>
+          Lær
+        </button>
+      </nav>
 
-              {typeof crowd?.topPctWorld === "number" ? (
-                <div className={styles.proofPill}>
-                  Top <strong>{crowd.topPctWorld}%</strong> i verden
-                </div>
-              ) : null}
-
-              {typeof crowd?.topPctCategory === "number" ? (
-                <div className={styles.proofPill}>
-                  Top <strong>{crowd.topPctCategory}%</strong> i stilen
-                </div>
-              ) : null}
+      {/* Content */}
+      {tab === "overview" && (
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <h2>Brew DNA</h2>
+              <p className={styles.hint}>Hvordan kaffen opleves (fællesskab)</p>
             </div>
-          ) : null}
-        </div>
-      </section>
-
-      {/* BREW DNA */}
-      <section className={styles.section}>
-        <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle}>Brew DNA</h2>
-          <button className={styles.linkBtn} type="button">
-            Se forklaring
-          </button>
-        </div>
-        <p className={styles.sectionHint}>Hvordan kaffen opleves (fællesskab)</p>
-
-        <div className={styles.dnaCard}>
-          <div className={styles.dnaVisual}>
-            <div
-              className={styles.dnaPie}
-              style={
-                {
-                  "--degBody": `${angles.body}deg`,
-                  "--degAcid": `${angles.acid}deg`,
-                  "--degSweet": `${angles.sweet}deg`,
-                } as React.CSSProperties
-              }
-            />
+            <button className={styles.linkButton} type="button">
+              Se forklaring
+            </button>
           </div>
 
-          <div className={styles.dnaLabels}>
-            <span>Syre</span>
-            <span>Krop</span>
-            <span>Sødme</span>
+          <div className={styles.dnaCard}>
+            <div className={styles.dnaPie} style={{ background: dnaBg }} />
+            <div className={styles.dnaLabels}>
+              <span>Syre</span>
+              <span>Krop</span>
+              <span>Sødme</span>
+            </div>
+            <div className={styles.socialProof}>
+              Mest brygget som <strong>{recommendedBrew.method}</strong> (62%)
+            </div>
           </div>
 
-          {/* ✅ SOCIAL PROOF: “mest brygget som …” */}
-          {crowd?.mostBrewed ? (
-            <div className={styles.mostBrewed}>
-              Mest brygget som <strong>{crowd.mostBrewed.method}</strong> ({crowd.mostBrewed.pct}%)
+          <div className={styles.spacer} />
+
+          <h2>Smagsretning</h2>
+          <p className={styles.summary}>{tasteSummary}</p>
+
+          <div className={styles.tags}>
+            {tasteNotes.map((t) => (
+              <span key={t.label} className={styles.tag}>
+                {t.label} <em>{t.count}</em>
+              </span>
+            ))}
+          </div>
+
+          <h3 className={styles.subTitle}>Passer godt til</h3>
+          <div className={styles.moments}>
+            <span>Morgen</span>
+            <span>Eftermiddag</span>
+            <span>Dessert</span>
+            <span>Fokus</span>
+          </div>
+        </section>
+      )}
+
+      {tab === "brew" && (
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <h2>Bryg</h2>
+              <p className={styles.hint}>Anbefalet opskrift + presets</p>
             </div>
-          ) : null}
-        </div>
-      </section>
+          </div>
 
-      {/* SMAGSRETNING */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Smagsretning</h2>
-        <p className={styles.summary}>{tasteSummary}</p>
-
-        <div className={styles.tags}>
-          {tasteNotes.slice(0, 10).map((t) => (
-            <span key={t.label} className={styles.tag}>
-              {t.label}
-              <span className={styles.tagCount}>{t.count}</span>
-            </span>
-          ))}
-        </div>
-
-        {/* ✅ BRUGSSITUATIONER (Vivino “Passer godt sammen med”) */}
-        {moments?.length ? (
-          <>
-            <h3 className={styles.subTitle}>Passer godt til</h3>
-            <div className={styles.moments}>
-              {moments.map((m) => (
-                <span key={m} className={styles.moment}>
-                  {m}
-                </span>
-              ))}
+          <div className={styles.brewHeroCard}>
+            <div>
+              <div className={styles.brewHeroTitle}>{recommendedBrew.method}</div>
+              <div className={styles.brewHeroReason}>{recommendedBrew.reason}</div>
             </div>
-          </>
-        ) : null}
-      </section>
+            <div className={styles.brewHeroTime}>{recommendedBrew.time}</div>
+          </div>
 
-      {/* ANBEFALET BRYG */}
-      <section className={styles.primaryAction}>
-        <div className={styles.primaryLeft}>
-          <strong>{recommendedBrew.method}</strong>
-          <span>{recommendedBrew.reason}</span>
-        </div>
-
-        <a href={recommendedBrew.href} className={styles.cta}>
-          BRYG NU
-          <span>{recommendedBrew.time}</span>
-        </a>
-      </section>
-
-      {/* VARIATIONER */}
-      <section className={styles.section}>
-        <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle}>Bryg-variationer</h2>
-          <div className={styles.sectionHintInline}>Læring: konsekvens først</div>
-        </div>
-
-        <div className={styles.variations}>
-          {variations.map((v) => (
-            <div key={v.id} className={styles.variationCard}>
-              <div className={styles.variationTop}>
-                <strong>{v.method}</strong>
-                <span className={styles.variationTime}>{v.time}</span>
+          <div className={styles.variations}>
+            {variations.map((v) => (
+              <div key={v.id} className={styles.variationCard}>
+                <div className={styles.variationTop}>
+                  <strong>{v.method}</strong>
+                  <span>{v.time}</span>
+                </div>
+                <p>{v.description}</p>
               </div>
+            ))}
+          </div>
+        </section>
+      )}
 
-              <p className={styles.variationDesc}>{v.description}</p>
-
-              {typeof v.popularityPct === "number" ? (
-                <div className={styles.variationProof}>
-                  Populær: <strong>{v.popularityPct}%</strong>
-                </div>
-              ) : null}
+      {tab === "reviews" && (
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <h2>Vurderinger</h2>
+              <p className={styles.hint}>Hvad folk siger (stub lige nu)</p>
             </div>
-          ))}
-        </div>
-      </section>
+            <button className={styles.primaryMini} type="button">
+              Skriv review
+            </button>
+          </div>
 
-      {/* VURDER & LÆR */}
-      <section className={styles.section}>
-        <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle}>Vurder & lær</h2>
-          <button className={styles.linkBtn} type="button">
-            Administrer præferencer
+          <div className={styles.reviewCard}>
+            <div className={styles.reviewTop}>
+              <span className={styles.reviewBadge}>★ 4,6</span>
+              <span className={styles.reviewMeta}>For 4 måneder siden</span>
+            </div>
+            <p className={styles.reviewText}>
+              “Flot, rund kop med chokolade og ristede noter. God balance.”
+            </p>
+          </div>
+
+          <div className={styles.reviewCard}>
+            <div className={styles.reviewTop}>
+              <span className={styles.reviewBadge}>★ 4,4</span>
+              <span className={styles.reviewMeta}>For 1 år siden</span>
+            </div>
+            <p className={styles.reviewText}>
+              “Fyldig og behagelig. Passer perfekt til eftermiddag.”
+            </p>
+          </div>
+
+          <button className={styles.linkFull} type="button">
+            Vis alle vurderinger →
           </button>
-        </div>
-        <p className={styles.sectionHint}>Din feedback forbedrer match og bryg-råd</p>
+        </section>
+      )}
 
-        <div className={styles.ratingRow}>
-          <button type="button">− Syre</button>
-          <button type="button">+ Syre</button>
-          <button type="button">− Krop</button>
-          <button type="button">+ Krop</button>
-          <button type="button">− Sødme</button>
-          <button type="button">+ Sødme</button>
-        </div>
-      </section>
+      {tab === "learn" && (
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <h2>Lær</h2>
+              <p className={styles.hint}>Origin / roaster / guides (stub)</p>
+            </div>
+          </div>
 
-      {/* SEKUNDÆRE */}
-      <section className={styles.secondary}>
-        <button type="button">Tilføj til Bar</button>
-        <button type="button">Se anmeldelser</button>
-      </section>
+          <div className={styles.learnCard}>
+            <h3>Hvad betyder Brew DNA?</h3>
+            <p>
+              Brew DNA er en fællesskabsprofil over hvordan kaffen typisk opleves – så du kan vælge smartere.
+            </p>
+            <button className={styles.primaryMini} type="button">Åbn guide</button>
+          </div>
+
+          <div className={styles.learnCard}>
+            <h3>Sådan rammer du bedre krop & sødme</h3>
+            <p>Små tweaks: temperatur, ratio og pour-pattern kan ændre alt.</p>
+            <button className={styles.primaryMini} type="button">Læs mere</button>
+          </div>
+        </section>
+      )}
+
+      {/* Sticky CTA (safe-area fixed) */}
+      <footer className={styles.stickyBar}>
+        <div className={styles.stickyInner}>
+          <div className={styles.stickyLeft}>
+            <div className={styles.stickyMethod}>{recommendedBrew.method}</div>
+            <div className={styles.stickyReason}>{recommendedBrew.reason}</div>
+          </div>
+
+          <a className={styles.cta} href={recommendedBrew.href}>
+            <span>BRYG NU</span>
+            <small>{recommendedBrew.time}</small>
+          </a>
+        </div>
+      </footer>
     </main>
   );
 }
