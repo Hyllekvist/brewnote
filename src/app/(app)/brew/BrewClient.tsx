@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "./BrewClient.module.css";
 
 type Step = {
@@ -14,14 +14,7 @@ type Step = {
 function formatMMSS(total: number) {
   const m = Math.floor(total / 60);
   const s = total % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
-function formatTenth(ms: number) {
-  const totalSeconds = ms / 1000;
-  const m = Math.floor(totalSeconds / 60);
-  const s = totalSeconds % 60;
-  return `${String(m).padStart(2, "0")}:${s.toFixed(1).padStart(4, "0")}`;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
 export default function BrewClient({ type, slug }: { type: string; slug: string }) {
@@ -30,14 +23,14 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
     return type === "tea" ? `Tea Brew — ${name}` : `Coffee Brew — ${name}`;
   }, [type, slug]);
 
-  // v2: stadig hardcoded flow – men UI matcher “rigtig bryg”
+  // v2: stadig hardcoded, men UI/flow er “rigtigt”
   const steps: Step[] = useMemo(
     () => [
       { id: "prep", label: "Prep", instruction: "Skyl filter + varm server/kop. Nulstil vægt.", seconds: 20 },
-      { id: "bloom", label: "Bloom", instruction: "Hæld til alle grunde er mættede.", targetG: 50, seconds: 35 },
+      { id: "bloom", label: "Bloom", instruction: "Hæld 50g og mæt alle grunde jævnt.", targetG: 50, seconds: 35 },
       { id: "pour1", label: "Pour 1", instruction: "Hæld stabilt i cirkler. Hold flowet roligt.", targetG: 150, seconds: 40 },
       { id: "pour2", label: "Pour 2", instruction: "Top op til slutvægt. Stop og lad dræne færdigt.", targetG: 300, seconds: 55 },
-      { id: "finish", label: "Finish", instruction: "Ryst let / swirl. Smag og log resultat.", seconds: 25 },
+      { id: "finish", label: "Finish", instruction: "Swirl let. Smag og log resultat.", seconds: 25 },
     ],
     []
   );
@@ -46,50 +39,73 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
 
   const [idx, setIdx] = useState(0);
   const [running, setRunning] = useState(false);
-  const [ms, setMs] = useState(0);
-  const [showSteps, setShowSteps] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  // timer
+  const [elapsed, setElapsed] = useState(0); // total
+  const [stepElapsed, setStepElapsed] = useState(0); // current step
 
   const current = steps[idx];
 
-  // v2: rigtig timer (ikke vægt-sensor endnu, men UI er “klar” til det)
   useEffect(() => {
     if (!running) return;
-    const t = setInterval(() => setMs((v) => v + 100), 100);
-    return () => clearInterval(t);
+
+    const t = window.setInterval(() => {
+      setElapsed((p) => p + 1);
+      setStepElapsed((p) => p + 1);
+    }, 1000);
+
+    return () => window.clearInterval(t);
   }, [running]);
 
-  // Progress ring: hvis step har seconds => brug elapsed i step,
-  // ellers brug “progress pr. step” så ringen altid føles levende.
-  const stepSeconds = current.seconds || 0;
-  const stepProgress = stepSeconds > 0 ? Math.min(1, (ms / 1000) / stepSeconds) : (idx + 1) / steps.length;
-
-  // “Weight progress” mock: fyld op til targetG (kun til UI). 0..1
-  const target = current.targetG || 0;
-  const weightProgress = target ? Math.min(1, stepProgress) : 0;
-  const shownWeight = target ? Math.round(target * weightProgress) : 0;
-
-  const ringDeg = Math.round(weightProgress * 360);
-
-  const goPrev = () => setIdx((p) => Math.max(0, p - 1));
-  const goNext = () => setIdx((p) => Math.min(steps.length - 1, p + 1));
-
-  // Når man skifter step: reset step-timer for at føles som en rigtig guide
+  // auto-advance når step timer er færdig
   useEffect(() => {
-    setMs(0);
-    setRunning(false);
+    const limit = current.seconds || 0;
+    if (!running || !limit) return;
+    if (stepElapsed < limit) return;
+
+    // vibrate hvis mobil
+    try {
+      if (navigator.vibrate) navigator.vibrate([40, 40, 40]);
+    } catch {}
+
+    // næste step
+    setIdx((p) => Math.min(steps.length - 1, p + 1));
+    setStepElapsed(0);
+  }, [stepElapsed, running, current.seconds, steps.length]);
+
+  // når idx ændres manuelt
+  useEffect(() => {
+    setStepElapsed(0);
   }, [idx]);
+
+  const stepSeconds = current.seconds || 0;
+  const stepProgress = stepSeconds ? Math.min(1, stepElapsed / stepSeconds) : 0.12;
+
+  const progressDeg = Math.round(stepProgress * 360);
+
+  const primaryLabel = current.targetG ? `${current.targetG.toFixed(0)}g` : "—";
+  const timerLabel = formatMMSS(elapsed);
+
+  const canPrev = idx > 0;
+  const canNext = idx < steps.length - 1;
 
   return (
     <main className={styles.page}>
-      {/* top bar (minimal) */}
       <header className={styles.topBar}>
-        <a className={styles.iconBtn} href={slug ? `/coffees/${encodeURIComponent(slug)}` : "/"} aria-label="Tilbage">
-          ‹
+        <a
+          className={styles.iconBtn}
+          href={slug ? `/coffees/${encodeURIComponent(slug)}` : "/"}
+          aria-label="Tilbage"
+        >
+          ←
         </a>
 
-        <div className={styles.topCenter}>
+        <div className={styles.topTitle}>
           <div className={styles.kicker}>BREW MODE</div>
-          <div className={styles.h1} title={title}>{title}</div>
+          <div className={styles.h1} title={title}>
+            {title}
+          </div>
         </div>
 
         <button className={styles.iconBtn} onClick={() => history.back()} aria-label="Luk">
@@ -97,100 +113,124 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
         </button>
       </header>
 
-      {/* main “one screen” stage */}
-      <section className={styles.stage} aria-label="Brew stage">
-        {/* timer */}
+      {/* “Over fold” cockpit */}
+      <section className={styles.cockpit}>
         <div className={styles.timerRow}>
-          <div className={styles.timer}>{formatTenth(ms)}</div>
-          <button className={styles.stepsPill} onClick={() => setShowSteps(true)} type="button">
-            {idx + 1}/{steps.length} · {current.label}
+          <div className={styles.timer}>{timerLabel}</div>
+
+          <button
+            className={styles.stepPill}
+            onClick={() => setSheetOpen((v) => !v)}
+            aria-expanded={sheetOpen}
+          >
+            <span className={styles.pillIdx}>
+              {idx + 1}/{steps.length}
+            </span>
+            <span className={styles.pillLabel}>{current.label}</span>
+            <span className={styles.pillChevron}>{sheetOpen ? "▾" : "▴"}</span>
           </button>
         </div>
 
-        {/* dial */}
-        <div className={styles.dialWrap}>
-          <div className={styles.dialOuter}>
-            <div
-              className={styles.dialRing}
-              style={{
-                background: `conic-gradient(var(--accent1) 0deg ${ringDeg}deg, rgba(255,255,255,.10) ${ringDeg}deg 360deg)`,
-              }}
-            />
-            <div className={styles.dialInner}>
-              <div className={styles.weightBig}>
-                {target ? `${shownWeight.toLocaleString("da-DK")},0 g` : "—"}
-              </div>
+        <div className={styles.ringWrap}>
+          <div
+            className={styles.ring}
+            style={{
+              background: `conic-gradient(var(--accentOk) 0deg ${progressDeg}deg, rgba(255,255,255,.10) ${progressDeg}deg 360deg)`,
+            }}
+          >
+            <div className={styles.ringInner}>
+              <div className={styles.bigNumber}>{primaryLabel}</div>
 
               <div className={styles.metrics}>
                 <div className={styles.metric}>
                   <div className={styles.metricLabel}>WEIGHT</div>
-                  <div className={styles.metricVal}>
-                    {target ? `${shownWeight.toLocaleString("da-DK")},0 g` : "—"}
-                  </div>
+                  <div className={styles.metricVal}>{primaryLabel}</div>
                 </div>
+                <div className={styles.metricDivider} />
                 <div className={styles.metric}>
                   <div className={styles.metricLabel}>FLOW RATE</div>
-                  <div className={styles.metricVal}>0 g/s</div>
+                  <div className={styles.metricVal}>3.5g/s</div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* small action bubble (placeholder for “pour mode” etc.) */}
-          <button className={styles.fab} type="button" aria-label="Brew tools">
-            ⏱
+        <p className={styles.instruction}>{current.instruction}</p>
+
+        <div className={styles.controls}>
+          <button
+            className={styles.btn}
+            onClick={() => setIdx((p) => Math.max(0, p - 1))}
+            disabled={!canPrev}
+          >
+            ←
+          </button>
+
+          <button
+            className={`${styles.btn} ${styles.btnPrimary}`}
+            onClick={() => setRunning((v) => !v)}
+          >
+            {running ? "Pause" : "Start"}
+          </button>
+
+          <button
+            className={styles.btn}
+            onClick={() => setIdx((p) => Math.min(steps.length - 1, p + 1))}
+            disabled={!canNext}
+          >
+            →
           </button>
         </div>
 
-        {/* instruction */}
-        <div className={styles.instruction}>
-          {current.targetG
-            ? `Hæld ${current.targetG}g vand – ${current.instruction}`
-            : current.instruction}
-        </div>
-
-        {/* dots */}
-        <div className={styles.dots} aria-label="Step progress">
-          {steps.map((s, i) => (
-            <button
-              key={s.id}
-              type="button"
-              className={i === idx ? styles.dotActive : styles.dot}
-              onClick={() => setIdx(i)}
-              aria-label={`Gå til ${s.label}`}
-            />
-          ))}
-        </div>
-
-        {/* controls pinned */}
-        <div className={styles.controlsDock}>
-          <div className={styles.controls}>
-            <button className={styles.ctrlBtn} onClick={goPrev} disabled={idx === 0} type="button" aria-label="Forrige">
-              ‹
-            </button>
-
-            <button
-              className={styles.ctrlBtnCenter}
-              onClick={() => setRunning((v) => !v)}
-              type="button"
-              aria-label={running ? "Pause" : "Start"}
-            >
-              {running ? "Ⅱ" : "▶"}
-            </button>
-
-            <button className={styles.ctrlBtn} onClick={goNext} disabled={idx === steps.length - 1} type="button" aria-label="Næste">
-              ›
-            </button>
-          </div>
-
-          <div className={styles.metaRow}>
-            <span>Total {formatMMSS(totalSeconds)}</span>
-            <button className={styles.linkBtn} onClick={() => setShowSteps(true)} type="button">
-              Alle steps
-            </button>
-          </div>
+        {/* micro status */}
+        <div className={styles.microRow}>
+          <span>
+            Step: <strong>{stepSeconds ? formatMMSS(Math.max(0, stepSeconds - stepElapsed)) : "—"}</strong>
+          </span>
+          <span>
+            Total: <strong>{formatMMSS(totalSeconds)}</strong>
+          </span>
         </div>
       </section>
 
-      {/* bottom sheet for steps (so you keep “no scroll” feel) */}
-      <div className={showSteps ? styles.sheetBackdrop : styles.sheetBackdropHidden}
+      {/* Bottom sheet steps */}
+      <section className={`${styles.sheet} ${sheetOpen ? styles.sheetOpen : ""}`}>
+        <div className={styles.sheetHandle} onClick={() => setSheetOpen((v) => !v)} role="button" tabIndex={0} />
+        <div className={styles.sheetHead}>
+          <div className={styles.sheetTitle}>Steps</div>
+          <div className={styles.sheetMeta}>Total {formatMMSS(totalSeconds)}</div>
+        </div>
+
+        <div className={styles.stepList}>
+          {steps.map((s, i) => (
+            <button
+              key={s.id}
+              className={`${styles.stepRow} ${i === idx ? styles.stepRowActive : ""}`}
+              onClick={() => {
+                setIdx(i);
+                setSheetOpen(false);
+              }}
+            >
+              <div className={styles.stepLeft}>
+                <div className={styles.bullet}>{i + 1}</div>
+                <div>
+                  <div className={styles.rowTitle}>{s.label}</div>
+                  <div className={styles.rowSub}>
+                    {s.targetG ? `${s.targetG}g` : "—"} · {s.seconds ? `${s.seconds}s` : "—"}
+                  </div>
+                </div>
+              </div>
+              <div className={styles.chev}>›</div>
+            </button>
+          ))}
+        </div>
+
+        <div className={styles.bottomActions}>
+          <button className={styles.flatBtn}>Log resultat</button>
+          <button className={styles.flatBtn}>Gem som preset</button>
+        </div>
+      </section>
+    </main>
+  );
+}
