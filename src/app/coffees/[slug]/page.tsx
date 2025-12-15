@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import styles from "./ProductScreen.module.css";
+import ProductScreen from "@/components/ProductScreen/ProductScreen";
 
 type BrewDNA = {
   acid: number;
