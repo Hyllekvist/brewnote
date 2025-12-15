@@ -58,4 +58,9 @@
 
 .ring{
   width: 260px;
-  height
+  height: 260px;
+  border-radius: 999px;
+  margin: 0 auto;
+  padding: 14px;
+  box-shadow: inset 0 0 0 10px rgba(0,0,0,.18);
+}
