@@ -1,6 +1,6 @@
 "use client";
 
-import styles from "./ProductScreenV2.module.css";
+import styles from "./ProductScreen.module.css";
 
 type BrewDNA = {
   acid: number;
