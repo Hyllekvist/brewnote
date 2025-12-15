@@ -1,130 +1,258 @@
-.page {
+.page{
   background: var(--bg);
   color: var(--ink);
   padding-bottom: 120px;
 }
 
 /* HERO */
-.hero {
+.hero{
   position: relative;
-  padding: 48px 20px 32px;
+  padding: 44px 18px 22px;
 }
 
-.heroTexture {
+.heroTexture{
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(60% 40% at 20% 0%, rgba(255,153,102,.25), transparent),
-    linear-gradient(to bottom, rgba(0,0,0,.7), var(--bg));
+    radial-gradient(60% 40% at 20% 0%, rgba(255,153,102,.18), transparent),
+    radial-gradient(55% 35% at 85% 12%, rgba(255,94,98,.14), transparent),
+    linear-gradient(to bottom, rgba(0,0,0,.62), var(--bg));
   z-index: 0;
 }
 
-.heroContent {
+.heroContent{
   position: relative;
   z-index: 1;
 }
 
-.meta {
+.meta{
   font-size: 12px;
   letter-spacing: .08em;
   text-transform: uppercase;
   opacity: .7;
 }
 
-.title {
+.title{
   margin-top: 8px;
   font-size: 32px;
   letter-spacing: -0.03em;
 }
 
+/* ✅ Match row */
+.matchRow{
+  margin-top: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.matchBadge{
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  width: fit-content;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.10);
+}
+
+.matchPct{
+  font-weight: 850;
+  letter-spacing: -0.01em;
+}
+
+.matchLabel{
+  font-size: 13px;
+  opacity: .75;
+}
+
+.matchActions{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.matchBtn{
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.10);
+  color: var(--ink);
+  opacity: .9;
+}
+
+.matchBtnActive{
+  background: rgba(255,153,102,.16);
+  border-color: rgba(255,153,102,.28);
+}
+
+/* ✅ Social proof pills */
+.proofRow{
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.proofPill{
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.10);
+  font-size: 13px;
+  opacity: .92;
+}
+
 /* SECTIONS */
-.section {
-  padding: 28px 20px 0;
+.section{
+  padding: 26px 18px 0;
 }
 
-.sectionTitle {
+.sectionHead{
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sectionTitle{
   font-size: 16px;
+  margin: 0;
 }
 
-.sectionHint {
+.sectionHint{
   font-size: 13px;
   opacity: .6;
-  margin-top: 4px;
+  margin-top: 6px;
+}
+
+.sectionHintInline{
+  font-size: 12px;
+  opacity: .6;
+}
+
+.linkBtn{
+  background: transparent;
+  border: none;
+  color: var(--ink);
+  opacity: .65;
+  font-size: 13px;
+  padding: 6px 0;
 }
 
 /* BREW DNA */
-.dnaCard {
-  margin-top: 16px;
+.dnaCard{
+  margin-top: 14px;
   background: var(--panel);
   border-radius: 20px;
-  padding: 20px;
+  padding: 18px;
 }
 
-.dnaVisual {
+.dnaVisual{
   display: flex;
   justify-content: center;
+  padding: 8px 0 6px;
 }
 
-.dnaRing {
-  width: 120px;
-  height: 120px;
+/* ✅ pie style (mere “konsensus” end ring) */
+.dnaPie{
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
   background:
     conic-gradient(
-      var(--accent2) calc(var(--body) * 120deg),
-      var(--accent1) calc(var(--acid) * 120deg),
-      rgba(255,255,255,.12)
+      var(--accent2) 0 var(--degBody),
+      var(--accent1) var(--degBody) calc(var(--degBody) + var(--degAcid)),
+      rgba(255,255,255,.12) calc(var(--degBody) + var(--degAcid)) 360deg
     );
-  box-shadow: 0 0 40px rgba(255,153,102,.35);
+  box-shadow: 0 0 44px rgba(255,153,102,.22);
+  border: 1px solid rgba(255,255,255,.10);
 }
 
-.dnaLabels {
+.dnaLabels{
   display: flex;
   justify-content: space-between;
-  margin-top: 12px;
+  margin-top: 10px;
   font-size: 12px;
-  opacity: .7;
+  opacity: .72;
+}
+
+/* ✅ “Mest brygget som …” */
+.mostBrewed{
+  margin-top: 10px;
+  font-size: 13px;
+  opacity: .82;
 }
 
 /* SMAG */
-.summary {
+.summary{
   margin-top: 8px;
-  opacity: .8;
+  opacity: .82;
 }
 
-.tags {
+.tags{
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 12px;
 }
 
-.tag {
+.tag{
   padding: 8px 12px;
   border-radius: 999px;
   background: var(--panel2);
+  border: 1px solid rgba(255,255,255,.08);
   font-size: 13px;
 }
 
-.tagCount {
-  margin-left: 6px;
+.tagCount{
+  margin-left: 8px;
   opacity: .6;
 }
 
+.subTitle{
+  margin: 16px 0 8px;
+  font-size: 14px;
+  opacity: .9;
+}
+
+/* ✅ moments */
+.moments{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.moment{
+  padding: 9px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.10);
+  font-size: 13px;
+  opacity: .9;
+}
+
 /* CTA */
-.primaryAction {
-  margin: 32px 20px 0;
+.primaryAction{
+  margin: 28px 18px 0;
   padding: 16px;
   border-radius: 18px;
   background: linear-gradient(135deg, var(--accent1), var(--accent2));
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   color: #0b0d10;
 }
 
-.cta {
-  font-weight: 800;
+.primaryLeft{
+  display: grid;
+  gap: 4px;
+}
+
+.cta{
+  font-weight: 900;
+  letter-spacing: .04em;
   text-decoration: none;
   color: inherit;
   display: flex;
@@ -132,43 +260,79 @@
   align-items: flex-end;
 }
 
+.cta span{
+  font-weight: 700;
+  letter-spacing: 0;
+  opacity: .85;
+}
+
 /* VARIATIONER */
-.variations {
+.variations{
   display: flex;
   gap: 12px;
   overflow-x: auto;
+  padding-bottom: 6px;
 }
 
-.variationCard {
-  min-width: 200px;
+.variationCard{
+  min-width: 220px;
   padding: 14px;
   background: var(--panel);
   border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.variationTop{
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.variationTime{
+  font-size: 12px;
+  opacity: .7;
+}
+
+.variationDesc{
+  margin: 8px 0 10px;
+  opacity: .8;
+  font-size: 13px;
+}
+
+.variationProof{
+  font-size: 12px;
+  opacity: .75;
 }
 
 /* VURDER */
-.ratingRow {
+.ratingRow{
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  margin-top: 10px;
 }
 
-.ratingRow button {
+.ratingRow button{
   padding: 10px 12px;
   background: var(--panel2);
+  border: 1px solid rgba(255,255,255,.08);
   border-radius: 12px;
   color: var(--ink);
 }
 
 /* SECONDARY */
-.secondary {
+.secondary{
   display: flex;
   gap: 12px;
-  padding: 28px 20px;
+  padding: 26px 18px;
 }
 
-.secondary button {
+.secondary button{
   background: transparent;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 14px;
+  padding: 10px 12px;
   color: var(--ink);
-  opacity: .7;
+  opacity: .75;
 }
