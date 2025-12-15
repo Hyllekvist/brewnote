@@ -336,3 +336,12 @@
   color: var(--ink);
   opacity: .75;
 }
+
+.page { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
+
+.primaryAction {
+  position: sticky;
+  bottom: 0;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  backdrop-filter: blur(18px);
+}
