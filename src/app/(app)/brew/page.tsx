@@ -1,12 +1,21 @@
-import { BrewMode } from "@/components/BrewMode/BrewMode";
-import styles from "./brew.module.css";
+import type { Metadata } from "next";
+import BrewClient from "./BrewClient";
 
-export default function Brew() {
-  return (
-    <div className={styles.wrap}>
-      <h1 className={styles.h1}>Bryg</h1>
-      <p className={styles.p}>Brew Mode er retention-loopet.</p>
-      <BrewMode />
-    </div>
-  );
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Brew Mode – BrewNote",
+  description: "Step-by-step bryg med timer, pour steps og log.",
+  alternates: { canonical: "/brew" },
+};
+
+export default function BrewPage({
+  searchParams,
+}: {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}) {
+  const type = (searchParams?.type as string) || "coffee";
+  const slug = (searchParams?.slug as string) || "";
+
+  return <BrewClient type={type} slug={slug} />;
 }
