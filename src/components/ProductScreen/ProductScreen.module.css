@@ -1,312 +1,174 @@
-.page{
-  padding-bottom: 96px;
+.page {
   background: var(--bg);
   color: var(--ink);
+  padding-bottom: 120px;
 }
 
-/* ---------- HERO ---------- */
-.hero{
+/* HERO */
+.hero {
   position: relative;
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 18px 14px 0;
+  padding: 48px 20px 32px;
 }
 
-.heroBg{
-  position:absolute;
-  inset:0;
+.heroTexture {
+  position: absolute;
+  inset: 0;
   background:
-    radial-gradient(900px 520px at 20% 0%, rgba(255,94,98,0.20), transparent 55%),
-    radial-gradient(720px 460px at 90% 10%, rgba(255,153,102,0.16), transparent 60%),
-    linear-gradient(to bottom, rgba(0,0,0,0.55), rgba(0,0,0,0));
-  filter: blur(0px);
-  pointer-events:none;
-  border-bottom-left-radius: 22px;
-  border-bottom-right-radius: 22px;
+    radial-gradient(60% 40% at 20% 0%, rgba(255,153,102,.25), transparent),
+    linear-gradient(to bottom, rgba(0,0,0,.7), var(--bg));
+  z-index: 0;
 }
 
-.heroMedia{
+.heroContent {
   position: relative;
-  height: 270px;
-  border-radius: 22px;
-  overflow:hidden;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 18px 60px rgba(0,0,0,0.45);
+  z-index: 1;
 }
 
-.heroImg{
-  object-fit: cover;
-  transform: scale(1.02);
-  filter: saturate(1.05) contrast(1.05);
-}
-
-.heroFallback{
-  position:absolute;
-  inset:0;
-  background:
-    radial-gradient(520px 340px at 30% 20%, rgba(255,94,98,0.22), transparent 60%),
-    radial-gradient(520px 340px at 70% 10%, rgba(255,153,102,0.18), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,0.05), rgba(0,0,0,0));
-}
-
-.heroVignette{
-  position:absolute;
-  inset:0;
-  background:
-    radial-gradient(80% 70% at 50% 30%, transparent 20%, rgba(0,0,0,0.55) 100%),
-    linear-gradient(to bottom, rgba(0,0,0,0.0), rgba(0,0,0,0.62));
-  pointer-events:none;
-}
-
-.heroText{
-  margin-top: 14px;
-  padding: 0 2px;
-}
-
-.kicker{
+.meta {
   font-size: 12px;
-  letter-spacing: 0.08em;
+  letter-spacing: .08em;
   text-transform: uppercase;
-  opacity: 0.70;
+  opacity: .7;
 }
 
-.h1{
-  margin: 6px 0 0;
-  font-size: 34px;
-  line-height: 1.05;
+.title {
+  margin-top: 8px;
+  font-size: 32px;
   letter-spacing: -0.03em;
 }
 
-/* ---------- CORE: DNA + CTA ---------- */
-.core{
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 14px 14px 0;
-  display: grid;
-  gap: 12px;
+/* SECTIONS */
+.section {
+  padding: 28px 20px 0;
 }
 
-.dnaCard{
-  border-radius: 22px;
-  padding: 16px 16px 14px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 14px 42px rgba(0,0,0,0.35);
+.sectionTitle {
+  font-size: 16px;
 }
 
-.dnaTop{
-  display:flex;
-  align-items:center;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.dnaTitle{
-  font-size: 15px;
-  font-weight: 750;
-  letter-spacing: -0.01em;
-}
-
-.dnaSub{
+.sectionHint {
+  font-size: 13px;
+  opacity: .6;
   margin-top: 4px;
-  font-size: 12px;
-  opacity: 0.65;
 }
 
-.dnaSvg{
-  display:block;
-  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.35));
-}
-
-.dnaLegend{
-  margin-top: 10px;
-  font-size: 12px;
-  opacity: 0.70;
-  display:flex;
-  align-items:center;
-  gap: 8px;
-}
-
-.legendDot{
-  width:10px;
-  height:10px;
-  border-radius: 99px;
-  background: linear-gradient(135deg, var(--accent1), var(--accent2));
-  box-shadow: 0 8px 18px rgba(255,94,98,0.22);
-}
-
-.sep{ opacity:0.45; }
-
-/* Primary CTA */
-.primaryCta{
-  border-radius: 18px;
-  padding: 16px 16px 14px;
-  text-decoration:none;
-  color: #0b0d10;
-  background: linear-gradient(135deg, var(--accent1), var(--accent2));
-  box-shadow: 0 18px 44px rgba(255,94,98,0.22);
-  display:flex;
-  align-items:flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.primaryLabel{
-  font-size: 16px;
-  font-weight: 850;
-  letter-spacing: 0.06em;
-}
-
-.primaryHint{
-  font-size: 12px;
-  opacity: 0.85;
-  margin-top: 2px;
-}
-
-/* ---------- SECTION ---------- */
-.section{
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 14px 14px 0;
-}
-
-.sectionHead{
-  display:flex;
-  align-items:flex-end;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.h2{
-  margin: 0;
-  font-size: 16px;
-  letter-spacing: -0.01em;
-}
-
-.sectionSub{
-  font-size: 12px;
-  opacity: 0.60;
-}
-
-/* Presets */
-.presetRow{
-  display:flex;
-  gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 6px;
-  scrollbar-width: none;
-}
-.presetRow::-webkit-scrollbar{ display:none; }
-
-.presetCard{
-  min-width: 220px;
-  border-radius: 18px;
-  padding: 14px;
-  text-decoration:none;
-  color: var(--ink);
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 12px 36px rgba(0,0,0,0.28);
-}
-
-.presetTop{
-  display:flex;
-  align-items:flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.presetLabel{
-  font-size: 14px;
-  font-weight: 760;
-}
-
-.presetSub{
-  margin-top: 2px;
-  font-size: 12px;
-  opacity: 0.65;
-}
-
-.presetTime{
-  font-size: 12px;
-  opacity: 0.75;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(0,0,0,0.30);
-  border: 1px solid rgba(255,255,255,0.08);
-}
-
-.dnaMini{
-  margin-top: 12px;
-  opacity: 0.95;
-}
-
-.presetGhost{
+/* BREW DNA */
+.dnaCard {
   margin-top: 16px;
-  height: 68px;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.06);
+  background: var(--panel);
+  border-radius: 20px;
+  padding: 20px;
 }
 
-/* Chips */
-.chips{
-  display:flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.dnaVisual {
+  display: flex;
+  justify-content: center;
 }
 
-.chip{
-  display:inline-flex;
-  align-items:center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.08);
-  font-size: 13px;
+.dnaRing {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background:
+    conic-gradient(
+      var(--accent2) calc(var(--body) * 120deg),
+      var(--accent1) calc(var(--acid) * 120deg),
+      rgba(255,255,255,.12)
+    );
+  box-shadow: 0 0 40px rgba(255,153,102,.35);
 }
 
-.chipCount{
-  font-size: 12px;
-  opacity: 0.65;
-}
-
-/* Secondary actions */
-.secondaryRow{
-  display:flex;
-  gap: 10px;
+.dnaLabels {
+  display: flex;
+  justify-content: space-between;
   margin-top: 12px;
+  font-size: 12px;
+  opacity: .7;
+}
+
+/* SMAG */
+.summary {
+  margin-top: 8px;
+  opacity: .8;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.tag {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--panel2);
+  font-size: 13px;
+}
+
+.tagCount {
+  margin-left: 6px;
+  opacity: .6;
+}
+
+/* CTA */
+.primaryAction {
+  margin: 32px 20px 0;
+  padding: 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--accent1), var(--accent2));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #0b0d10;
+}
+
+.cta {
+  font-weight: 800;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+/* VARIATIONER */
+.variations {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+}
+
+.variationCard {
+  min-width: 200px;
+  padding: 14px;
+  background: var(--panel);
+  border-radius: 16px;
+}
+
+/* VURDER */
+.ratingRow {
+  display: flex;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
-.secondaryBtn{
-  text-decoration:none;
+.ratingRow button {
+  padding: 10px 12px;
+  background: var(--panel2);
+  border-radius: 12px;
   color: var(--ink);
-  font-size: 13px;
-  padding: 11px 12px;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.08);
 }
 
-/* Bottom fade (nice on mobile) */
-.bottomFade{
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 96px;
-  pointer-events:none;
-  background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.65));
+/* SECONDARY */
+.secondary {
+  display: flex;
+  gap: 12px;
+  padding: 28px 20px;
 }
 
-/* Mobile tighten */
-@media (max-width: 640px){
-  .hero{ padding: 14px 12px 0; }
-  .core, .section{ padding-left: 12px; padding-right: 12px; }
-  .heroMedia{ height: 240px; }
-  .h1{ font-size: 30px; }
+.secondary button {
+  background: transparent;
+  color: var(--ink);
+  opacity: .7;
 }
