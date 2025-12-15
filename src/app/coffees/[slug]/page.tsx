@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import ProductScreenV2 from "@/components/ProductScreen/ProductScreenV2";
+import ProductScreen from "@/components/ProductScreen/ProductScreen";
 
 export const dynamic = "force-static";
 
