@@ -1,0 +1,10 @@
+html[data-theme="dark"]{
+  --bg:#0b0d10;--panel:rgba(255,255,255,.06);--panel2:rgba(255,255,255,.09);
+  --ink:rgba(255,255,255,.92);--muted:rgba(255,255,255,.68);--line:rgba(255,255,255,.12);
+  --accent1:#ff9966;--accent2:#ff5e62;--ok:#21c07a;
+}
+html[data-theme="light"]{
+  --bg:#ffffff;--panel:rgba(10,12,16,.05);--panel2:rgba(10,12,16,.08);
+  --ink:rgba(10,12,16,.92);--muted:rgba(10,12,16,.62);--line:rgba(10,12,16,.10);
+  --accent1:#ff9966;--accent2:#ff5e62;--ok:#0f9d5c;
+}

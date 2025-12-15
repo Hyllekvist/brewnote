@@ -1,0 +1,4 @@
+.page{min-height:100vh}
+.main{max-width:var(--max);margin:0 auto;padding:24px 16px 64px}
+.footer{border-top:1px solid var(--line);padding:18px 0;color:var(--muted)}
+.inner{max-width:var(--max);margin:0 auto;padding:0 16px}

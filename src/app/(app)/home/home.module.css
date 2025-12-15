@@ -1,0 +1,8 @@
+.wrap{max-width:860px}
+.h1{margin:0;font-size:28px;letter-spacing:-0.03em}
+.p{margin-top:8px;color:var(--muted);line-height:1.5}
+.row{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{border:1px solid var(--line);background:var(--panel);border-radius:18px;padding:14px;box-shadow:var(--shadow-1)}
+.cardTitle{font-weight:900}
+.cardText{margin-top:6px;color:var(--muted)}
+@media (max-width:900px){.row{grid-template-columns:1fr}}

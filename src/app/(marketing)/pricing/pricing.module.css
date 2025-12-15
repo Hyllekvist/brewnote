@@ -1,0 +1,10 @@
+.wrap{max-width:860px}
+.h1{margin:0;font-size:34px;letter-spacing:-0.03em}
+.p{color:var(--muted);line-height:1.5;margin-top:10px}
+.grid{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card,.cardPro{border-radius:18px;padding:16px;border:1px solid var(--line);background:var(--panel);box-shadow:var(--shadow-1)}
+.cardPro{background:color-mix(in srgb,var(--panel) 60%, transparent);border:1px solid color-mix(in srgb,var(--accent2) 40%, var(--line))}
+.plan{font-weight:900}
+.price{margin-top:6px;font-size:28px;font-weight:900;letter-spacing:-0.03em}
+.ul{margin:10px 0 0;padding-left:18px;color:var(--muted);line-height:1.6}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}

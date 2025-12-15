@@ -1,0 +1,8 @@
+.card{display:block;padding:14px 14px 12px;border:1px solid var(--line);background:var(--panel);border-radius:var(--radius-lg);box-shadow:var(--shadow-1)}
+.card:hover{background:var(--panel2)}
+.badge{display:inline-block;font-size:12px;font-weight:900;padding:6px 10px;border-radius:999px;background:linear-gradient(135deg,var(--accent1),var(--accent2));color:#0b0d10}
+.title{margin-top:10px;font-weight:900;letter-spacing:-0.02em}
+.sub{margin-top:4px;color:var(--muted);font-size:13px}
+.meta{margin-top:12px;display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:13px}
+.muted{color:var(--muted)}
+.arrow{font-size:18px;color:var(--ink)}

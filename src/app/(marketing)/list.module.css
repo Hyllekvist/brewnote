@@ -1,0 +1,4 @@
+.h1{margin:0;font-size:34px;letter-spacing:-0.03em}
+.p{color:var(--muted);margin-top:10px}
+.ul{margin-top:14px;display:grid;gap:10px;padding-left:18px}
+.ul a{text-decoration:underline}

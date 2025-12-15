@@ -1,0 +1,8 @@
+.wrap{max-width:860px}
+.h1{margin:0;font-size:34px;letter-spacing:-0.03em}
+.p{margin-top:10px;color:var(--muted);line-height:1.6}
+.dna{margin-top:16px;border:1px solid var(--line);background:var(--panel);border-radius:18px;padding:16px;box-shadow:var(--shadow-1)}
+.dnaTitle{font-weight:900;margin-bottom:10px}
+.dnaRow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;color:var(--muted)}
+.bar{flex:1;max-width:420px;height:10px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(135deg,var(--accent1),var(--accent2))}

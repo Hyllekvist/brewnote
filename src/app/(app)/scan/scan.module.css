@@ -1,0 +1,8 @@
+.wrap{max-width:860px}
+.h1{margin:0;font-size:28px;letter-spacing:-0.03em}
+.p{margin-top:8px;color:var(--muted);line-height:1.5}
+.search{margin-top:12px;display:flex;gap:10px}
+.input{flex:1;border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:12px 12px;color:var(--ink)}
+.btn{border:none;border-radius:14px;padding:12px 14px;background:linear-gradient(135deg,var(--accent1),var(--accent2));color:#0b0d10;font-weight:900}
+.hint{margin-top:12px;color:var(--muted)}
+.hint a{text-decoration:underline}

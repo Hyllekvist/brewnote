@@ -1,0 +1,8 @@
+:root{
+  --radius-sm:12px;--radius-md:14px;--radius-lg:18px;
+  --shadow-1:0 10px 30px rgba(0,0,0,.25);
+  --shadow-2:0 20px 60px rgba(0,0,0,.35);
+  --max:1120px;
+  --space-1:6px;--space-2:10px;--space-3:14px;--space-4:18px;--space-5:24px;--space-6:32px;
+  --fz-1:12px;--fz-2:14px;--fz-3:16px;--fz-4:18px;--fz-5:22px;--fz-6:30px;--fz-7:40px;
+}
