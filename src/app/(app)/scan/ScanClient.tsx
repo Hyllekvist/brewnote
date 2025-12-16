@@ -17,7 +17,7 @@ type Match = {
 };
 
 type Suggestion = {
-  variant_id: string; // kan være "" hvis “ingen varianter”
+  variant_id: string;
   label: string;
   confidence: number;
 };
@@ -81,6 +81,7 @@ export default function ScanClient() {
       intensity: ex.intensity,
       arabica_pct: ex.arabica_pct,
       organic: ex.organic,
+      ean: ex.ean,
     });
   }
 
@@ -90,8 +91,9 @@ export default function ScanClient() {
     if (!file) return;
 
     setBusy(true);
+
     try {
-      // 1) start
+      // 1) start scan
       const startRes = await fetch("/api/scan/start", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -108,11 +110,9 @@ export default function ScanClient() {
       }
 
       const { sessionId, uploadPath } = await startRes.json();
-      if (!sessionId || !uploadPath) {
-        throw new Error("start: missing sessionId/uploadPath");
-      }
+      if (!sessionId || !uploadPath) throw new Error("start: missing sessionId/uploadPath");
 
-      // 2) upload
+      // 2) upload image
       const { error: upErr } = await supabase.storage
         .from("scans")
         .upload(uploadPath, file, {
@@ -150,6 +150,7 @@ export default function ScanClient() {
 
     setErr(null);
     setBusy(true);
+
     try {
       const res = await fetch("/api/scan/resolve", {
         method: "POST",
@@ -162,7 +163,8 @@ export default function ScanClient() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`resolve ${res.status}: ${text}`);
+        const j = safeJson(text);
+        throw new Error(`resolve ${res.status}: ${j?.error ?? text}`);
       }
 
       const data = await res.json();
@@ -170,8 +172,8 @@ export default function ScanClient() {
       setResult((prev) => ({
         ...(prev ?? ({} as any)),
         status: "resolved",
-        confidence: data.confidence,
-        match: data.match,
+        confidence: data.confidence ?? 0.9,
+        match: data.match ?? null,
         suggestions: [],
       }));
     } catch (e: any) {
@@ -181,39 +183,46 @@ export default function ScanClient() {
     }
   }
 
+  async function saveExtracted() {
+    if (!result?.sessionId) throw new Error("Missing sessionId");
+
+    const updRes = await fetch("/api/scan/update-extracted", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        sessionId: result.sessionId,
+        extracted: {
+          brand: edit.brand?.trim() || undefined,
+          line: edit.line?.trim() || undefined,
+          name: edit.name?.trim() || undefined,
+          size_g: edit.size_g ? Number(edit.size_g) : undefined,
+          form: edit.form,
+          intensity: edit.intensity != null ? Number(edit.intensity) : undefined,
+          arabica_pct: edit.arabica_pct != null ? Number(edit.arabica_pct) : undefined,
+          organic: edit.organic,
+          ean: edit.ean?.trim() || undefined,
+        },
+      }),
+    });
+
+    if (!updRes.ok) {
+      const text = await updRes.text();
+      const j = safeJson(text);
+      throw new Error(`update-extracted ${updRes.status}: ${j?.error ?? text}`);
+    }
+  }
+
   async function onSaveExtractedAndRetry() {
     if (!result?.sessionId) return;
 
     setErr(null);
     setBusy(true);
+
     try {
       // 1) save extracted
-      const updRes = await fetch("/api/scan/update-extracted", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          sessionId: result.sessionId,
-          extracted: {
-            brand: edit.brand?.trim() || undefined,
-            line: edit.line?.trim() || undefined,
-            name: edit.name?.trim() || undefined,
-            size_g: edit.size_g ? Number(edit.size_g) : undefined,
-            form: edit.form,
-            intensity:
-              edit.intensity != null ? Number(edit.intensity) : undefined,
-            arabica_pct:
-              edit.arabica_pct != null ? Number(edit.arabica_pct) : undefined,
-            organic: edit.organic,
-          },
-        }),
-      });
+      await saveExtracted();
 
-      if (!updRes.ok) {
-        const text = await updRes.text();
-        throw new Error(`update-extracted ${updRes.status}: ${text}`);
-      }
-
-      // 2) process again
+      // 2) run process again (now it should use session.extracted)
       const procRes = await fetch("/api/scan/process", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -236,49 +245,52 @@ export default function ScanClient() {
     }
   }
 
-  // ✅ A: Create product + variant from extracted (crowd DB)
-async function onCreateFromExtracted() {
-  if (!result?.sessionId) return;
+  async function onCreateAsNewProduct() {
+    if (!result?.sessionId) return;
 
-  setErr(null);
-  setBusy(true);
+    setErr(null);
+    setBusy(true);
 
-  try {
-    const res = await fetch("/api/scan/create-product-from-extracted", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sessionId: result.sessionId }),
-    });
+    try {
+      // 1) GEM edit -> session.extracted (ellers bruger create-route gammel extracted)
+      await saveExtracted();
 
-    const text = await res.text();
-    const j = safeJson(text);
+      // 2) create product from extracted
+      const res = await fetch("/api/scan/create-product-from-extracted", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sessionId: result.sessionId }),
+      });
 
-    console.log("create-product status:", res.status);
-    console.log("create-product raw:", text);
-    console.log("create-product json:", j);
+      const text = await res.text();
+      const j = safeJson(text);
 
-    if (!res.ok) {
-      throw new Error(`create-product ${res.status}: ${j?.error ?? text}`);
+      console.log("create-product status:", res.status);
+      console.log("create-product raw:", text);
+      console.log("create-product json:", j);
+
+      if (!res.ok) {
+        throw new Error(`create-product ${res.status}: ${j?.error ?? text}`);
+      }
+
+      // forventer { status, confidence, match, extracted? }
+      setResult((prev) => ({
+        ...(prev ?? ({} as any)),
+        status: "resolved",
+        confidence: j?.confidence ?? 0.92,
+        match: j?.match ?? null,
+        suggestions: [],
+        extracted: j?.extracted ?? (prev?.extracted ?? {}),
+      }));
+
+      // valgfrit: opdatér editor til det vi lige har gemt
+      // (ellers står den allerede rigtigt)
+    } catch (e: any) {
+      setErr(e?.message ?? "Noget gik galt");
+    } finally {
+      setBusy(false);
     }
-
-    // forventer { status, confidence, match }
-    setResult((prev) => ({
-      ...(prev ?? ({} as any)),
-      status: "resolved",
-      confidence: j?.confidence ?? 0.92,
-      match: j?.match ?? null,
-      suggestions: [],
-    }));
-  } catch (e: any) {
-    setErr(e?.message ?? "Noget gik galt");
-  } finally {
-    setBusy(false);
   }
-}
-
-
-  const hasMinForCreate =
-    (edit.brand?.trim() ?? "").length > 0 && (edit.name?.trim() ?? "").length > 0;
 
   return (
     <div style={{ maxWidth: 820, margin: "0 auto", padding: 16 }}>
@@ -317,27 +329,19 @@ async function onCreateFromExtracted() {
             <b>{Math.round(result.confidence * 100)}%</b>
           </div>
 
-          {result.status === "resolved" && result.match && (
+          {/* Result */}
+          {result.match && (
             <>
               <h3 style={{ marginTop: 10 }}>
-                {result.match.brand}{" "}
-                {result.match.line ? `${result.match.line} ` : ""}
+                {result.match.brand} {result.match.line ? `${result.match.line} ` : ""}
                 {result.match.name}
               </h3>
               <ul style={{ marginTop: 8 }}>
-                {result.match.size_g != null && (
-                  <li>Størrelse: {result.match.size_g}g</li>
-                )}
+                {result.match.size_g != null && <li>Størrelse: {result.match.size_g}g</li>}
                 {result.match.form && <li>Form: {result.match.form}</li>}
-                {result.match.intensity != null && (
-                  <li>Intensitet: {result.match.intensity}/10</li>
-                )}
-                {result.match.arabica_pct != null && (
-                  <li>Arabica: {result.match.arabica_pct}%</li>
-                )}
-                {result.match.organic != null && (
-                  <li>Organic: {result.match.organic ? "Ja" : "Nej"}</li>
-                )}
+                {result.match.intensity != null && <li>Intensitet: {result.match.intensity}/10</li>}
+                {result.match.arabica_pct != null && <li>Arabica: {result.match.arabica_pct}%</li>}
+                {result.match.organic != null && <li>Organic: {result.match.organic ? "Ja" : "Nej"}</li>}
               </ul>
             </>
           )}
@@ -351,15 +355,9 @@ async function onCreateFromExtracted() {
               {(result.suggestions ?? []).length > 0 && (
                 <ul style={{ margin: "0 0 12px", paddingLeft: 18 }}>
                   {(result.suggestions ?? []).map((s) => (
-                    <li
-                      key={s.variant_id || s.label}
-                      style={{ marginBottom: 8 }}
-                    >
+                    <li key={s.variant_id || s.label} style={{ marginBottom: 8 }}>
                       {s.variant_id ? (
-                        <button
-                          onClick={() => onResolve(s.variant_id)}
-                          disabled={busy}
-                        >
+                        <button onClick={() => onResolve(s.variant_id)} disabled={busy}>
                           Vælg: {s.label} ({Math.round(s.confidence * 100)}%)
                         </button>
                       ) : (
@@ -375,31 +373,15 @@ async function onCreateFromExtracted() {
           )}
 
           {/* Manual edit extracted */}
-          <div
-            style={{
-              marginTop: 14,
-              paddingTop: 12,
-              borderTop: "1px solid #222",
-            }}
-          >
-            <div style={{ fontWeight: 600, marginBottom: 10 }}>
-              Ret info (MVP)
-            </div>
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #222" }}>
+            <div style={{ fontWeight: 600, marginBottom: 10 }}>Ret info (MVP)</div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 10,
-              }}
-            >
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <label style={{ display: "grid", gap: 6 }}>
                 <span style={{ fontSize: 12, opacity: 0.8 }}>Brand</span>
                 <input
                   value={edit.brand ?? ""}
-                  onChange={(e) =>
-                    setEdit((p) => ({ ...p, brand: e.target.value }))
-                  }
+                  onChange={(e) => setEdit((p) => ({ ...p, brand: e.target.value }))}
                 />
               </label>
 
@@ -407,9 +389,7 @@ async function onCreateFromExtracted() {
                 <span style={{ fontSize: 12, opacity: 0.8 }}>Line</span>
                 <input
                   value={edit.line ?? ""}
-                  onChange={(e) =>
-                    setEdit((p) => ({ ...p, line: e.target.value }))
-                  }
+                  onChange={(e) => setEdit((p) => ({ ...p, line: e.target.value }))}
                 />
               </label>
 
@@ -417,9 +397,7 @@ async function onCreateFromExtracted() {
                 <span style={{ fontSize: 12, opacity: 0.8 }}>Name</span>
                 <input
                   value={edit.name ?? ""}
-                  onChange={(e) =>
-                    setEdit((p) => ({ ...p, name: e.target.value }))
-                  }
+                  onChange={(e) => setEdit((p) => ({ ...p, name: e.target.value }))}
                 />
               </label>
 
@@ -441,9 +419,7 @@ async function onCreateFromExtracted() {
                 <span style={{ fontSize: 12, opacity: 0.8 }}>Form</span>
                 <select
                   value={edit.form ?? "beans"}
-                  onChange={(e) =>
-                    setEdit((p) => ({ ...p, form: e.target.value as any }))
-                  }
+                  onChange={(e) => setEdit((p) => ({ ...p, form: e.target.value as any }))}
                 >
                   <option value="beans">beans</option>
                   <option value="ground">ground</option>
@@ -453,20 +429,11 @@ async function onCreateFromExtracted() {
               <label style={{ display: "grid", gap: 6 }}>
                 <span style={{ fontSize: 12, opacity: 0.8 }}>Organic</span>
                 <select
-                  value={
-                    edit.organic === undefined
-                      ? ""
-                      : edit.organic
-                      ? "true"
-                      : "false"
-                  }
+                  value={edit.organic === undefined ? "" : edit.organic ? "true" : "false"}
                   onChange={(e) =>
                     setEdit((p) => ({
                       ...p,
-                      organic:
-                        e.target.value === ""
-                          ? undefined
-                          : e.target.value === "true",
+                      organic: e.target.value === "" ? undefined : e.target.value === "true",
                     }))
                   }
                 >
@@ -478,24 +445,12 @@ async function onCreateFromExtracted() {
             </div>
 
             <div style={{ marginTop: 12, display: "flex", gap: 10 }}>
-              <button
-                onClick={onSaveExtractedAndRetry}
-                disabled={busy || !result?.sessionId}
-              >
+              <button onClick={onSaveExtractedAndRetry} disabled={busy || !result?.sessionId}>
                 {busy ? "Arbejder..." : "Gem & match igen"}
               </button>
 
-              {/* ✅ A: Create product */}
-              <button
-                onClick={onCreateFromExtracted}
-                disabled={busy || !result?.sessionId || !hasMinForCreate}
-                title={
-                  hasMinForCreate
-                    ? ""
-                    : "Udfyld mindst brand + name før du opretter"
-                }
-              >
-                Opret som nyt produkt
+              <button onClick={onCreateAsNewProduct} disabled={busy || !result?.sessionId}>
+                {busy ? "Opretter..." : "Opret som nyt produkt"}
               </button>
             </div>
           </div>
