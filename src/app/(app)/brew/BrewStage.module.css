@@ -144,19 +144,24 @@
   border-radius: 999px;
   pointer-events: none;
 
-  /* ring: conic-gradient baseret på --p */
+  /* 1) base track */
   background:
     conic-gradient(
       from -90deg,
-      rgba(255,255,255,0.85) var(--p),
+      rgba(255,255,255,0.95) var(--p),
       rgba(255,255,255,0.08) 0
     );
 
-  /* mask så vi får “stroke” */
+  /* 2) mask til stroke */
   -webkit-mask: radial-gradient(closest-side, transparent 66%, #000 67%);
           mask: radial-gradient(closest-side, transparent 66%, #000 67%);
-  opacity: 0.9;
+
+  /* 3) smooth */
+  transition: background 420ms cubic-bezier(.2,.9,.2,1);
+  filter: drop-shadow(0 0 14px rgba(120,180,255,0.25));
+  opacity: 0.95;
 }
+
 
 .hint {
   text-align: center;
@@ -193,4 +198,48 @@
   .ring {
     transition: none;
   }
+}
+
+.phase_bloom .ring {
+  background: conic-gradient(from -90deg,
+    rgba(120, 220, 255, 0.95) var(--p),
+    rgba(255,255,255,0.08) 0
+  );
+  filter: drop-shadow(0 0 16px rgba(120,220,255,0.30));
+}
+
+.phase_pour .ring {
+  background: conic-gradient(from -90deg,
+    rgba(90, 160, 255, 0.95) var(--p),
+    rgba(255,255,255,0.08) 0
+  );
+  filter: drop-shadow(0 0 16px rgba(90,160,255,0.30));
+}
+
+.phase_finish .ring {
+  background: conic-gradient(from -90deg,
+    rgba(160, 255, 160, 0.90) var(--p),
+    rgba(255,255,255,0.08) 0
+  );
+  filter: drop-shadow(0 0 16px rgba(160,255,160,0.22));
+  opacity: 0.85;
+}
+
+.dialOuter::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  pointer-events: none;
+
+  /* små ticks hver ~6 grader (60 ticks) */
+  background: repeating-conic-gradient(
+    from -90deg,
+    rgba(255,255,255,0.12) 0deg 1deg,
+    transparent 1deg 6deg
+  );
+
+  -webkit-mask: radial-gradient(closest-side, transparent 72%, #000 73%);
+          mask: radial-gradient(closest-side, transparent 72%, #000 73%);
+  opacity: 0.55;
 }
