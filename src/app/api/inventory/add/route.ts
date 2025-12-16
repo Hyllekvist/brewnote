@@ -1,26 +1,30 @@
 import { NextResponse } from "next/server";
+import { supabaseServer } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
-  const { user_key, product_slug } = await req.json();
+  const body = await req.json();
+  const variantId = body?.variantId as string | undefined;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  if (!url || !anon) {
-    return NextResponse.json({ ok: false, error: "Missing env" }, { status: 500 });
+  if (!variantId) {
+    return NextResponse.json({ error: "Missing variantId" }, { status: 400 });
   }
 
-  const res = await fetch(`${url}/rest/v1/inventory`, {
-    method: "POST",
-    headers: {
-      apikey: anon,
-      Authorization: `Bearer ${anon}`,
-      "Content-Type": "application/json",
-      Prefer: "return=representation",
-    },
-    body: JSON.stringify([{ user_key, product_slug }]),
-  });
+  const supabase = supabaseServer();
 
-  const text = await res.text();
-  return NextResponse.json({ ok: res.ok, status: res.status, body: text }, { status: res.ok ? 200 : 400 });
+  // MVP uden login: vi gemmer bare variant_id + qty
+  // (tilføj user_id senere når du vil have login)
+  const { data, error } = await supabase
+    .from("inventory")
+    .insert({
+      variant_id: variantId,
+      qty: 1,
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  return NextResponse.json({ ok: true, row: data });
 }
