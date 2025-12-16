@@ -1,29 +1,44 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { supabaseServer } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
-  const { userKey, variantId, qty } = await req.json();
+  try {
+    const { variantId, qty } = await req.json();
 
-  if (!userKey || !variantId) {
-    return NextResponse.json({ error: "Missing userKey/variantId" }, { status: 400 });
+    if (!variantId) {
+      return NextResponse.json({ error: "Missing variantId" }, { status: 400 });
+    }
+
+    const supabase = supabaseServer();
+
+    // ✅ hent user fra auth (cookies)
+    const { data: u, error: uErr } = await supabase.auth.getUser();
+    const user = u?.user;
+
+    if (uErr || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const insertPayload: any = {
+      user_key: user.id,
+      variant_id: variantId,
+    };
+
+    // qty er optional (kun hvis din tabel har den)
+    if (qty != null) insertPayload.qty = Number(qty);
+
+    const { data, error } = await supabase
+      .from("inventory")
+      .insert(insertPayload)
+      .select("*")
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ ok: true, row: data });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message ?? "Bad request" }, { status: 400 });
   }
-
-  const q = Number.isFinite(Number(qty)) ? Math.max(1, Number(qty)) : 1;
-
-  const supabase = supabaseAdmin();
-
-  const { data, error } = await supabase
-    .from("inventory")
-    .upsert(
-      { user_key: userKey, variant_id: variantId, qty: q },
-      { onConflict: "user_key,variant_id" }
-    )
-    .select("user_key,variant_id,qty")
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  }
-
-  return NextResponse.json({ ok: true, item: data });
 }
