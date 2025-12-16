@@ -1,6 +1,17 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 
+type ProductRow = { id: string; brand: string; line: string | null; name: string };
+type VariantRow = {
+  id: string;
+  size_g: number | null;
+  form: string | null;
+  intensity: number | null;
+  arabica_pct: number | null;
+  organic: boolean | null;
+  products: ProductRow | ProductRow[] | null;
+};
+
 export async function POST(req: Request) {
   const { sessionId, variantId } = await req.json();
 
@@ -13,8 +24,7 @@ export async function POST(req: Request) {
 
   const supabase = supabaseServer();
 
-  // hent variant + product (så vi kan returnere match til UI)
-  const { data: v, error: vErr } = await supabase
+  const { data, error: vErr } = await supabase
     .from("product_variants")
     .select(
       "id, size_g, form, intensity, arabica_pct, organic, products(id, brand, line, name)"
@@ -22,16 +32,25 @@ export async function POST(req: Request) {
     .eq("id", variantId)
     .single();
 
-  if (vErr || !v?.products) {
+  if (vErr || !data) {
     return NextResponse.json({ error: "Unknown variant" }, { status: 404 });
   }
 
+  const v = data as VariantRow;
+
+  const p =
+    Array.isArray(v.products) ? v.products[0] : v.products;
+
+  if (!p) {
+    return NextResponse.json({ error: "Variant missing product" }, { status: 400 });
+  }
+
   const match = {
-    product_id: v.products.id,
+    product_id: p.id,
     variant_id: v.id,
-    brand: v.products.brand,
-    line: v.products.line,
-    name: v.products.name,
+    brand: p.brand,
+    line: p.line,
+    name: p.name,
     size_g: v.size_g,
     form: v.form,
     intensity: v.intensity,
@@ -39,7 +58,6 @@ export async function POST(req: Request) {
     organic: v.organic,
   };
 
-  // opdater scan_session som resolved
   const { error: upErr } = await supabase
     .from("scan_sessions")
     .update({
