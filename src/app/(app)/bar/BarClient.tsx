@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import styles from "./BarPage.module.css";
+import styles from "./BarClient.module.css";
 
 type Item = {
   id: string;
@@ -39,11 +39,19 @@ function brewHref(slug: string) {
   return `/brew?type=${type}&slug=${encodeURIComponent(slug)}`;
 }
 
+type FilterType = "all" | "coffee" | "tea";
+type SortMode = "recent" | "az" | "za";
+
 export default function BarClient() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // UI controls
+  const [filter, setFilter] = useState<FilterType>("all");
+  const [sort, setSort] = useState<SortMode>("recent");
+  const [q, setQ] = useState("");
 
   const userKey = useMemo(() => getUserKey(), []);
 
@@ -118,7 +126,6 @@ export default function BarClient() {
       const text = await res.text();
       if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
 
-      // 🔔 badge refresh
       window.dispatchEvent(new Event("brewnote_bar_changed"));
     } catch (e: any) {
       setItems(prev); // rollback
@@ -127,6 +134,44 @@ export default function BarClient() {
       setBusyId(null);
     }
   }
+
+  // Derived list: filter + search + sort
+  const shown = useMemo(() => {
+    const query = q.trim().toLowerCase();
+
+    let list = items.slice();
+
+    // filter coffee/tea
+    if (filter !== "all") {
+      list = list.filter((it) => {
+        const tea = isTeaSlug(it.product_slug);
+        return filter === "tea" ? tea : !tea;
+      });
+    }
+
+    // search (slug -> pretty name)
+    if (query) {
+      list = list.filter((it) =>
+        it.product_slug.replaceAll("-", " ").toLowerCase().includes(query)
+      );
+    }
+
+    // sort
+    if (sort === "recent") {
+      // already desc from API, but keep stable
+      list.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+    } else if (sort === "az") {
+      list.sort((a, b) =>
+        a.product_slug.localeCompare(b.product_slug, "da", { sensitivity: "base" })
+      );
+    } else if (sort === "za") {
+      list.sort((a, b) =>
+        b.product_slug.localeCompare(a.product_slug, "da", { sensitivity: "base" })
+      );
+    }
+
+    return list;
+  }, [items, filter, sort, q]);
 
   if (loading) return <div className={styles.loading}>Indlæser…</div>;
 
@@ -157,42 +202,106 @@ export default function BarClient() {
     );
 
   return (
-    <div className={styles.grid}>
-      {items.map((it) => {
-        const pretty = it.product_slug.replaceAll("-", " ");
-        const tea = isTeaSlug(it.product_slug);
+    <div>
+      {/* Controls */}
+      <div className={styles.controls}>
+        <div className={styles.searchWrap}>
+          <input
+            className={styles.search}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Søg i din bar…"
+            aria-label="Søg i din bar"
+          />
+        </div>
 
-        return (
-          <article key={it.id} className={styles.card}>
-            <div className={styles.cardTop}>
-              <div className={styles.kicker}>{tea ? "Te" : "Kaffe"}</div>
+        <div className={styles.pills} role="tablist" aria-label="Filter">
+          <button
+            type="button"
+            className={filter === "all" ? styles.pillActive : styles.pill}
+            onClick={() => setFilter("all")}
+          >
+            Alle
+          </button>
+          <button
+            type="button"
+            className={filter === "coffee" ? styles.pillActive : styles.pill}
+            onClick={() => setFilter("coffee")}
+          >
+            Kaffe
+          </button>
+          <button
+            type="button"
+            className={filter === "tea" ? styles.pillActive : styles.pill}
+            onClick={() => setFilter("tea")}
+          >
+            Te
+          </button>
+        </div>
 
-              <button
-                type="button"
-                className={styles.remove}
-                onClick={() => removeItem(it.id)}
-                disabled={busyId === it.id}
-                aria-label="Fjern fra Bar"
-                title="Fjern"
-              >
-                {busyId === it.id ? "Fjerner…" : "Fjern"}
-              </button>
-            </div>
+        <div className={styles.sortRow}>
+          <div className={styles.sortLabel}>Sorter</div>
+          <select
+            className={styles.select}
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortMode)}
+            aria-label="Sorter din bar"
+          >
+            <option value="recent">Senest tilføjet</option>
+            <option value="az">A → Z</option>
+            <option value="za">Z → A</option>
+          </select>
 
-            <div className={styles.title}>{pretty}</div>
+          <div className={styles.count}>
+            {shown.length} / {items.length}
+          </div>
+        </div>
+      </div>
 
-            <div className={styles.actions}>
-              <Link className={styles.primary} href={brewHref(it.product_slug)}>
-                Bryg nu
-              </Link>
+      {/* List */}
+      <div className={styles.grid}>
+        {shown.map((it) => {
+          const pretty = it.product_slug.replaceAll("-", " ");
+          const tea = isTeaSlug(it.product_slug);
 
-              <Link className={styles.secondary} href={productHref(it.product_slug)}>
-                Åbn produkt
-              </Link>
-            </div>
-          </article>
-        );
-      })}
+          return (
+            <article key={it.id} className={styles.card}>
+              <div className={styles.cardTop}>
+                <div className={styles.kicker}>{tea ? "Te" : "Kaffe"}</div>
+
+                <button
+                  type="button"
+                  className={styles.remove}
+                  onClick={() => removeItem(it.id)}
+                  disabled={busyId === it.id}
+                  aria-label="Fjern fra Bar"
+                  title="Fjern"
+                >
+                  {busyId === it.id ? "Fjerner…" : "Fjern"}
+                </button>
+              </div>
+
+              <div className={styles.title}>{pretty}</div>
+
+              <div className={styles.actions}>
+                <Link className={styles.primary} href={brewHref(it.product_slug)}>
+                  Bryg nu
+                </Link>
+
+                <Link className={styles.secondary} href={productHref(it.product_slug)}>
+                  Åbn produkt
+                </Link>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      {!shown.length ? (
+        <div className={styles.noResults}>
+          Ingen resultater. Prøv at rydde søgning eller skift filter.
+        </div>
+      ) : null}
     </div>
   );
 }
