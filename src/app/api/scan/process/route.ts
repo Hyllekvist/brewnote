@@ -169,28 +169,45 @@ async function resolveVariantWithSuggestions(supabase: any, ex: Extracted): Prom
   }
 
   // MVP: vælg bedste første hit
-  const p = products[0];
+// Vælg det produkt der faktisk har varianter (undgår duplicates)
+let bestProduct: any = null;
+let bestVariants: any[] = [];
 
-  // C) find varianter
-  const { data: variants } = await supabase
+for (const cand of products) {
+  const { data: vars } = await supabase
     .from("product_variants")
     .select("id, size_g, form, intensity, arabica_pct, organic")
-    .eq("product_id", p.id)
+    .eq("product_id", cand.id)
     .limit(25);
 
-  if (!variants?.length) {
-    // hvis product findes men ingen varianter -> needs_user
-    return {
-      match: null,
-      suggestions: [
-        {
-          variant_id: "",
-          label: `${p.brand} ${p.line ? p.line + " " : ""}${p.name} (ingen varianter i DB)`,
-          confidence: 0.3,
-        },
-      ],
-    };
+  if ((vars?.length ?? 0) > (bestVariants.length ?? 0)) {
+    bestProduct = cand;
+    bestVariants = vars ?? [];
   }
+
+  // hvis vi allerede har mindst én variant, kan vi stoppe tidligt (MVP)
+  if (bestVariants.length > 0) break;
+}
+
+if (!bestProduct) return { match: null, suggestions: [] };
+
+// brug nu bestProduct + bestVariants
+const p = bestProduct;
+const variants = bestVariants;
+
+if (!variants.length) {
+  return {
+    match: null,
+    suggestions: [
+      {
+        variant_id: "",
+        label: `${p.brand} ${p.line ? p.line + " " : ""}${p.name} (ingen varianter i DB)`,
+        confidence: 0.3,
+      },
+    ],
+  };
+}
+
 
   // D) exact variant match på size + form (hvis angivet)
   const exact = variants.find((v: any) => {
