@@ -1,0 +1,251 @@
+.page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 20px 16px 80px;
+  color: #fff;
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.h1 {
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.sub {
+  opacity: 0.75;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.grid {
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 840px) {
+  .grid {
+    grid-template-columns: 1.1fr 0.9fr;
+    align-items: start;
+  }
+}
+
+.card {
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  border-radius: 18px;
+  padding: 14px;
+  overflow: hidden;
+}
+
+.cardTitle {
+  font-weight: 700;
+  margin: 0 0 10px;
+  letter-spacing: -0.01em;
+}
+
+.pillRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.pill {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  opacity: 0.92;
+}
+
+.pillOk {
+  border-color: rgba(80, 255, 170, 0.35);
+  background: rgba(80, 255, 170, 0.10);
+}
+
+.pillWarn {
+  border-color: rgba(255, 200, 80, 0.35);
+  background: rgba(255, 200, 80, 0.10);
+}
+
+.pillBad {
+  border-color: rgba(255, 80, 120, 0.35);
+  background: rgba(255, 80, 120, 0.10);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.btn {
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.btnPrimary {
+  border-color: rgba(255, 170, 70, 0.45);
+  background: rgba(255, 170, 70, 0.14);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.fileRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.fileName {
+  opacity: 0.75;
+  font-size: 13px;
+}
+
+.scanHero {
+  display: grid;
+  place-items: center;
+  padding: 18px 10px;
+  text-align: center;
+  border-radius: 16px;
+  border: 1px dashed rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.03);
+}
+
+.scanIcon {
+  width: 84px;
+  height: 84px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.18);
+  margin-bottom: 10px;
+}
+
+.scanTitle {
+  font-size: 22px;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.scanHint {
+  margin-top: 6px;
+  opacity: 0.7;
+  font-size: 13px;
+}
+
+.kv {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.kvRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.kvLabel {
+  opacity: 0.75;
+  font-size: 13px;
+}
+
+.kvVal {
+  font-weight: 650;
+}
+
+.toast {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.28);
+  opacity: 0.95;
+}
+
+.toastOk {
+  border-color: rgba(80, 255, 170, 0.35);
+  background: rgba(80, 255, 170, 0.08);
+}
+
+.toastBad {
+  border-color: rgba(255, 80, 120, 0.35);
+  background: rgba(255, 80, 120, 0.08);
+}
+
+.sheet {
+  margin-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.10);
+  padding-top: 12px;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 520px) {
+  .formGrid { grid-template-columns: 1fr; }
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.label {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.input, .select {
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  padding: 10px 10px;
+  outline: none;
+}
+
+.input:focus, .select:focus {
+  border-color: rgba(255,170,70,0.5);
+}
+
+.spin {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,0.25);
+  border-top-color: rgba(255,170,70,0.9);
+  animation: spin 0.9s linear infinite;
+  display: inline-block;
+  vertical-align: -3px;
+  margin-right: 8px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
