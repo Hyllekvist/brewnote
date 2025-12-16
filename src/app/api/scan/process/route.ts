@@ -5,6 +5,7 @@ export async function POST(req: Request) {
   const { sessionId } = await req.json();
   const supabase = supabaseServer();
 
+
   // hent scan session
   const { data: session, error: sErr } = await supabase
     .from("scan_sessions")
