@@ -151,9 +151,6 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
   const ratioLabel = "1:16.7";
   const methodName = "Pour-over";
 
-
-
-  
   const saveBrew = useCallback(async () => {
     if (isSaving) return;
     setIsSaving(true);
@@ -181,13 +178,12 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
       if (!res.ok || !json?.ok) {
         throw new Error(json?.body || `HTTP ${res.status}`);
       }
+
+      // ✅ events (til BarClient + badges osv.)
       window.dispatchEvent(new Event("brewnote_brew_logged"));
+      window.dispatchEvent(new Event("brewnote_bar_changed"));
 
-// (valgfrit) hvis du også vil trigge badge/list reload generelt:
-window.dispatchEvent(new Event("brewnote_bar_changed"));
-
-window.location.href = `/brew/review?${qs.toString()}`;
-
+      // ✅ build qs før redirect
       const qs = new URLSearchParams({
         type,
         slug,
