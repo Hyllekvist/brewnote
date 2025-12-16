@@ -1,322 +1,385 @@
+/* src/app/(app)/brew/BrewClient.module.css */
+
 .page{
   min-height:100vh;
-  background:var(--bg);
-  color:var(--ink);
-  padding-bottom: calc(18px + env(safe-area-inset-bottom));
+  background: var(--bg, #0b0d10);
+  color: var(--ink, #f3f5f7);
+  padding-bottom: calc(74px + env(safe-area-inset-bottom)); /* plads til bottom nav */
 }
 
 /* ---------- TOP BAR ---------- */
+
 .topBar{
   display:flex;
   align-items:center;
-  justify-content: space-between;
+  gap:12px;
   padding: 14px 14px 10px;
-  gap: 12px;
   border-bottom: 1px solid rgba(255,255,255,.06);
+  position: sticky;
+  top: 0;
+  backdrop-filter: blur(10px);
+  background: rgba(11,13,16,.72);
+  z-index: 20;
 }
 
-.back, .close{
-  width: 44px;
-  height: 44px;
+.iconBtn{
+  width:44px;
+  height:44px;
   display:grid;
   place-items:center;
   border-radius: 14px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255,255,255,.12);
   background: rgba(255,255,255,.04);
-  color: var(--ink);
+  color: var(--ink, #f3f5f7);
   text-decoration:none;
   cursor:pointer;
   transition: transform .12s ease, background .12s ease, border-color .12s ease;
 }
-
-.back:hover, .close:hover{
+.iconBtn:hover{
+  transform: translateY(-1px);
   background: rgba(255,255,255,.06);
   border-color: rgba(255,255,255,.18);
-  transform: translateY(-1px);
 }
 
 .topTitle{ flex: 1; min-width:0; }
 .kicker{
   font-size: 11px;
   letter-spacing: .18em;
-  color: var(--muted);
+  color: rgba(255,255,255,.58);
   text-transform: uppercase;
 }
 .h1{
   margin-top: 2px;
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 850;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* ---------- MAIN “OVER FOLD” CARD ---------- */
-.deviceCard{
-  margin: 10px auto 0;
-  max-width: 980px;
-  padding: 14px 14px 12px;
+/* ---------- COCKPIT (over fold) ---------- */
+
+.cockpit{
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 14px 14px 0;
 }
+
+.timerRow{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 10px 0 12px;
+}
+
+.timer{
+  font-variant-numeric: tabular-nums;
+  font-size: 34px;
+  letter-spacing: -0.02em;
+  font-weight: 300;
+  color: rgba(255,255,255,.92);
+}
+
+.stepPill{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  border-radius: 999px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.9);
+  cursor:pointer;
+  user-select:none;
+}
+
+.pillIdx{
+  font-size: 12px;
+  font-weight: 900;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.10);
+}
+.pillLabel{
+  font-size: 13px;
+  font-weight: 850;
+}
+.pillChevron{
+  opacity: .7;
+  margin-left: 2px;
+}
+
+/* ---------- RING CARD ---------- */
 
 .ringWrap{
-  position: relative;
   border-radius: 28px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255,255,255,.10);
   background:
-    radial-gradient(540px 260px at 18% 0%, rgba(255,153,102,.18), transparent 60%),
-    radial-gradient(540px 260px at 92% 12%, rgba(255,94,98,.18), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03)),
-    var(--panel);
-  box-shadow: 0 28px 110px rgba(0,0,0,.28);
+    radial-gradient(540px 240px at 12% 0%, rgba(255,153,102,.18), transparent 60%),
+    radial-gradient(540px 240px at 92% 12%, rgba(255,94,98,.18), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+  box-shadow: 0 26px 90px rgba(0,0,0,.45);
   padding: 16px 14px 14px;
-  overflow: hidden;
+  overflow:hidden;
 }
 
-/* subtle glass noise */
-.ringWrap:before{
+.ring{
+  width: min(320px, 78vw);
+  height: min(320px, 78vw);
+  border-radius: 999px;
+  margin: 10px auto 0;
+  display:grid;
+  place-items:center;
+  position: relative;
+  box-shadow:
+    inset 0 0 0 12px rgba(0,0,0,.20),
+    0 24px 90px rgba(0,0,0,.40);
+}
+
+/* indre “dial” */
+.ring::before{
   content:"";
   position:absolute;
-  inset:-2px;
-  background:
-    radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,.08), transparent 55%),
-    radial-gradient(1px 1px at 70% 60%, rgba(255,255,255,.06), transparent 55%),
-    radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,.05), transparent 55%);
-  opacity:.35;
+  inset: 18px;
+  border-radius: 999px;
+  background: rgba(8,10,12,.55);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.08),
+    inset 0 0 0 10px rgba(255,255,255,.03);
+}
+
+/* subtle highlight */
+.ring::after{
+  content:"";
+  position:absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 18%, rgba(255,255,255,.10), transparent 55%);
   pointer-events:none;
 }
 
-/* The ring itself is a conic-gradient background set inline in TSX */
-.ring{
-  width: min(360px, 78vw);
-  height: min(360px, 78vw);
-  border-radius: 999px;
-  margin: 0 auto;
-  position: relative;
-  padding: 14px;
-  box-shadow:
-    inset 0 0 0 10px rgba(0,0,0,.18),
-    0 24px 80px rgba(0,0,0,.35);
-}
-
-/* inner dial */
-.ring:after{
-  content:"";
-  position:absolute;
-  inset: 18px;
-  border-radius: 999px;
-  background: rgba(0,0,0,.20);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
-}
-
-/* content inside ring */
 .ringInner{
-  position:absolute;
-  inset: 18px;
-  border-radius: 999px;
-  display:flex;
-  flex-direction: column;
-  align-items:center;
-  justify-content:center;
-  gap: 12px;
+  position: relative;
   z-index: 2;
   text-align:center;
-  padding: 14px;
+  width: calc(100% - 50px);
 }
 
 .bigNumber{
-  font-size: 58px;
+  font-size: 56px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
   line-height: 1;
-  font-weight: 800;
-  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
 .metrics{
+  margin-top: 14px;
   display:flex;
-  gap: 14px;
   align-items:center;
   justify-content:center;
-  width: 100%;
-  max-width: 260px;
+  gap: 18px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.metric{
+  min-width: 110px;
+  text-align:center;
 }
 
 .metricLabel{
-  display:block;
-  font-size: 10px;
-  letter-spacing: .18em;
+  font-size: 11px;
+  letter-spacing:.14em;
   text-transform: uppercase;
-  color: rgba(255,255,255,.55);
+  color: rgba(255,255,255,.62);
 }
 
 .metricVal{
-  display:block;
-  margin-top: 2px;
+  margin-top: 6px;
   font-size: 14px;
   font-weight: 900;
-  color: rgba(255,255,255,.90);
   font-variant-numeric: tabular-nums;
 }
 
-/* step pill (1/5 Prep) */
-.stepPill{
-  position:absolute;
-  left: 14px;
-  bottom: 14px;
-  display:inline-flex;
-  gap: 10px;
-  align-items:center;
-  padding: 10px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(15,16,18,.55);
-  backdrop-filter: blur(10px);
-  z-index: 3;
+.metricDivider{
+  width: 1px;
+  height: 34px;
+  background: rgba(255,255,255,.10);
 }
 
-.stepIndex{
-  font-weight: 900;
-  color: rgba(255,255,255,.92);
-}
-
-.stepLabel{
-  color: rgba(255,255,255,.76);
-  font-weight: 700;
-}
-
-/* instruction under card */
 .instruction{
-  margin: 12px 2px 0;
+  margin: 14px 2px 0;
   font-size: 16px;
-  line-height: 1.35;
+  line-height: 1.4;
   color: rgba(255,255,255,.86);
-  text-align: center;
+  text-align:center;
 }
 
 /* ---------- CONTROLS ---------- */
+
 .controls{
-  display:flex;
-  justify-content:center;
-  align-items:center;
+  display:grid;
+  grid-template-columns: 56px 1fr 56px;
   gap: 10px;
-  margin-top: 12px;
-  flex-wrap: wrap;
+  margin-top: 14px;
+  align-items:center;
 }
 
-.primaryBtn, .secondaryBtn{
-  height: 44px;
-  padding: 0 14px;
+.btn{
+  height: 46px;
   border-radius: 999px;
-  font-weight: 900;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.05);
+  color: rgba(255,255,255,.92);
+  font-weight: 850;
   cursor:pointer;
   transition: transform .12s ease, background .12s ease, border-color .12s ease, opacity .12s ease;
 }
-
-.secondaryBtn{
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.04);
-  color: rgba(255,255,255,.90);
-}
-
-.secondaryBtn:hover{
-  background: rgba(255,255,255,.06);
-  border-color: rgba(255,255,255,.20);
+.btn:hover{
   transform: translateY(-1px);
+  background: rgba(255,255,255,.07);
+  border-color: rgba(255,255,255,.18);
 }
-
-.secondaryBtn:disabled{
-  opacity: .45;
+.btn:disabled{
+  opacity:.35;
   cursor:not-allowed;
   transform:none;
 }
 
-.primaryBtn{
+.btnPrimary{
   border: none;
-  min-width: 130px;
-  background: linear-gradient(135deg, var(--accent1), var(--accent2));
   color: #101216;
-  box-shadow: 0 18px 60px rgba(255,94,98,.18);
+  background: linear-gradient(135deg, var(--accent1, #ff9966), var(--accent2, #ff5e62));
+  box-shadow: 0 18px 70px rgba(255,94,98,.20);
 }
 
-.primaryBtn:hover{
-  transform: translateY(-1px);
-  box-shadow: 0 22px 70px rgba(255,94,98,.24);
-}
-
-/* ---------- STEPS LIST (under fold) ---------- */
-.steps{
-  margin: 16px auto 0;
-  max-width: 980px;
-  padding: 0 14px 18px;
-}
-
-.stepsHeader{
+.microRow{
+  margin: 10px 2px 0;
   display:flex;
   justify-content: space-between;
-  align-items: baseline;
-  padding: 10px 6px 10px;
-  color: rgba(255,255,255,.78);
-}
-
-.stepsTitle{
-  font-weight: 900;
-  color: rgba(255,255,255,.92);
-}
-
-.stepsMeta{
+  gap: 12px;
+  color: rgba(255,255,255,.68);
   font-size: 12px;
-  color: rgba(255,255,255,.58);
 }
-
-.stepList{
-  display:flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.stepRow, .stepRowActive{
-  width: 100%;
-  border-radius: 16px;
-  padding: 12px 12px;
-  display:flex;
-  justify-content: space-between;
-  align-items:center;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.04);
+.microRow strong{
   color: rgba(255,255,255,.90);
+  font-weight: 900;
+}
+
+/* ---------- BOTTOM SHEET ---------- */
+
+.sheet{
+  position: fixed;
+  left: 0; right: 0;
+  bottom: calc(64px + env(safe-area-inset-bottom)); /* over bottom nav */
+  max-width: 520px;
+  margin: 0 auto;
+  border-radius: 22px 22px 0 0;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(15,17,20,.92);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 -24px 80px rgba(0,0,0,.55);
+  transform: translateY(calc(100% - 70px));
+  transition: transform .18s ease;
+  z-index: 30;
+  overflow:hidden;
+}
+
+.sheetOpen{
+  transform: translateY(0);
+}
+
+.sheetHandle{
+  width: 62px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.16);
+  margin: 10px auto 8px;
   cursor:pointer;
 }
 
+.sheetHead{
+  display:flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.sheetTitle{
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.sheetMeta{
+  color: rgba(255,255,255,.65);
+  font-size: 12px;
+}
+
+.stepList{
+  max-height: 44vh;
+  overflow:auto;
+  padding: 10px 10px 12px;
+}
+
+.stepRow{
+  width: 100%;
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align:left;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.03);
+  color: rgba(255,255,255,.90);
+  padding: 12px 12px;
+  cursor:pointer;
+  margin-bottom: 10px;
+}
+
 .stepRowActive{
-  border-color: rgba(255,255,255,.22);
   background:
-    radial-gradient(420px 160px at 18% 0%, rgba(255,153,102,.18), transparent 60%),
-    radial-gradient(420px 160px at 92% 12%, rgba(255,94,98,.18), transparent 60%),
-    rgba(255,255,255,.06);
+    radial-gradient(420px 180px at 12% 0%, rgba(255,153,102,.16), transparent 60%),
+    radial-gradient(420px 180px at 92% 12%, rgba(255,94,98,.16), transparent 60%),
+    rgba(255,255,255,.04);
+  border-color: rgba(255,255,255,.14);
 }
 
 .stepLeft{
   display:flex;
-  gap: 10px;
   align-items:center;
+  gap: 12px;
+  min-width: 0;
 }
 
 .bullet{
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border-radius: 999px;
   display:grid;
   place-items:center;
   font-weight: 900;
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.10);
+  flex: 0 0 auto;
 }
 
 .rowTitle{
   font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .rowSub{
-  margin-top: 2px;
+  margin-top: 3px;
   font-size: 12px;
   color: rgba(255,255,255,.62);
 }
@@ -324,35 +387,22 @@
 .chev{
   opacity: .55;
   font-size: 18px;
+  flex: 0 0 auto;
 }
 
-/* bottom actions */
 .bottomActions{
   display:flex;
   gap: 10px;
-  padding-top: 12px;
+  padding: 0 12px 12px;
 }
 
 .flatBtn{
-  flex: 1;
+  flex:1;
   height: 44px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.04);
-  color: rgba(255,255,255,.90);
-  font-weight: 900;
+  color: rgba(255,255,255,.9);
+  font-weight: 850;
   cursor:pointer;
-}
-
-.flatBtn:hover{
-  background: rgba(255,255,255,.06);
-  border-color: rgba(255,255,255,.20);
-  transform: translateY(-1px);
-}
-
-/* ---------- MOBILE: keep “brew cockpit” over fold feel ---------- */
-@media (max-width: 480px){
-  .bigNumber{ font-size: 52px; }
-  .timerRow{ display:none; } /* hvis du senere vil have timer øverst, så tilføj den i TSX */
-  .deviceCard{ padding-top: 12px; }
 }
