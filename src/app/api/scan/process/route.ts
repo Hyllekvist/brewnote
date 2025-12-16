@@ -68,17 +68,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unknown session" }, { status: 404 });
   }
 
-  // 2) MOCK extract (v1)
-  const extracted: Extracted = {
-    brand: "Lavazza",
-    line: "Tierra!",
-    name: "Bio-Organic",
-    size_g: 500,
-    form: "beans",
-    intensity: 6,
-    arabica_pct: 100,
-    organic: true,
-  };
+ // Brug eksisterende extracted hvis brugeren allerede har rettet (ellers fallback til mock)
+const extracted: Extracted =
+  (session.extracted && Object.keys(session.extracted).length > 0)
+    ? (session.extracted as Extracted)
+    : {
+        brand: "Lavazza",
+        line: "Tierra!",
+        name: "Bio-Organic",
+        size_g: 500,
+        form: "beans",
+        intensity: 6,
+        arabica_pct: 100,
+        organic: true,
+      };
+
 
   // 2.5) LÆRING LOOKUP (fingerprint -> variant)
   const fp = fingerprintFromExtracted(extracted);
