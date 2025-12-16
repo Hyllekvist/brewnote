@@ -1,27 +1,40 @@
 import { NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabaseServer";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   const { fileName } = await req.json();
-  const supabase = supabaseServer();
+  const supabase = createClient();
 
+  // 1. kræv login
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
 
-  // kræver auth.uid() i RLS -> her bruger vi service role, så vi sætter user_id via JWT i næste iteration.
-  // MVP: hvis du allerede har auth på client, så send userId med (eller brug cookies-based auth).
-  // For nu: vi gemmer user_id = null og låser i næste iteration.
+  if (error || !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // 2. opret scan-session
   const sessionId = crypto.randomUUID();
-  const uploadPath = `anon/${sessionId}-${sanitize(fileName)}`;
+  const safeName = sanitize(fileName);
+  const uploadPath = `${user.id}/${sessionId}-${safeName}`;
 
-  const { error } = await supabase.from("scan_sessions").insert({
-    id: sessionId,
-    user_id: null,
-    image_path: uploadPath,
-    extracted: {},
-    status: "pending",
-  });
+  const { error: insertError } = await supabase
+    .from("scan_sessions")
+    .insert({
+      id: sessionId,
+      user_id: user.id,
+      image_path: uploadPath,
+      extracted: {},
+      status: "pending",
+    });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  if (insertError) {
+    return NextResponse.json(
+      { error: insertError.message },
+      { status: 400 }
+    );
   }
 
   return NextResponse.json({ sessionId, uploadPath });
