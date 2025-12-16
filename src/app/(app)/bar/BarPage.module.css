@@ -70,72 +70,102 @@
   font-size: 13px;
 }
 
-/* List */
+/* List (premium) */
 .grid {
   display: grid;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+@media (min-width: 760px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
 }
 
 .card {
-  display: block;
-  padding: 14px;
-  border-radius: 18px;
-  text-decoration: none;
+  padding: 16px;
+  border-radius: 20px;
   background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 10px 30px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(10px);
+}
+
+.cardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 .cardMeta {
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.65;
 }
 
 .cardTitle {
   margin-top: 4px;
   font-weight: 900;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  font-size: 18px;
+  text-transform: capitalize;
 }
 
-.cardHint {
-  margin-top: 6px;
+.badge {
+  padding: 8px 10px;
+  border-radius: 999px;
   font-size: 12px;
-  opacity: 0.7;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  opacity: 0.9;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
+
 .actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
   gap: 10px;
-  margin-top: 12px;
-  flex-wrap: wrap;
 }
 
 .primaryBtn {
-  padding: 10px 12px;
+  height: 44px;
   border-radius: 14px;
   text-decoration: none;
-  font-weight: 800;
-  background: rgba(255, 255, 255, 0.12);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.10);
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 .ghostBtn {
-  padding: 10px 12px;
+  height: 44px;
   border-radius: 14px;
   text-decoration: none;
-  font-weight: 700;
-  opacity: 0.9;
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-}
-
-.dangerBtn {
-  padding: 10px 12px;
-  border-radius: 14px;
   font-weight: 800;
-  background: rgba(255, 90, 90, 0.10);
-  box-shadow: inset 0 0 0 1px rgba(255, 90, 90, 0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.92;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
-.dangerBtn:disabled {
-  opacity: 0.6;
+.iconBtn {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  font-weight: 900;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  opacity: 0.85;
+}
+
+.iconBtn:disabled {
+  opacity: 0.55;
 }
