@@ -1,12 +1,27 @@
 import { NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabaseServer";
+import { supabaseServer } from "@/lib/supabase/server";
+
+type Extracted = {
+  brand?: string;
+  line?: string;
+  name?: string;
+  size_g?: number;
+  form?: "beans" | "ground";
+  intensity?: number;
+  arabica_pct?: number;
+  organic?: boolean;
+  ean?: string; // senere hvis du scanner barcode
+};
 
 export async function POST(req: Request) {
   const { sessionId } = await req.json();
+  if (!sessionId) {
+    return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
+  }
+
   const supabase = supabaseServer();
 
-
-  // hent scan session
+  // 1) hent session
   const { data: session, error: sErr } = await supabase
     .from("scan_sessions")
     .select("*")
@@ -17,9 +32,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unknown session" }, { status: 404 });
   }
 
-  // -------- MOCK EXTRACT (v1) --------
-  // Du skifter det her ud med rigtig vision/OCR senere.
-  const extracted = {
+  // 2) MOCK extract (v1)
+  // Skift dette ud med rigtig OCR senere.
+  const extracted: Extracted = {
     brand: "Lavazza",
     line: "Tierra!",
     name: "Bio-Organic",
@@ -27,68 +42,107 @@ export async function POST(req: Request) {
     form: "beans",
     intensity: 6,
     arabica_pct: 100,
-    organic: true,
+    organic: true
   };
 
-  // resolve mod DB
-  const match = await resolveVariant(supabase, extracted);
+  // 3) resolve
+  const resolved = await resolveVariant(supabase, extracted);
 
-  const status = match ? "resolved" : "needs_user";
-  const confidence = match ? 0.9 : 0.5;
+  const status = resolved ? "resolved" : "needs_user";
+  const confidence = resolved ? 0.9 : 0.55;
 
-  await supabase.from("scan_sessions").update({
-    extracted,
-    resolved_variant_id: match?.variant_id ?? null,
-    resolution_confidence: confidence,
-    status,
-  }).eq("id", sessionId);
+  // 4) persist
+  const { error: upErr } = await supabase
+    .from("scan_sessions")
+    .update({
+      extracted,
+      resolved_variant_id: resolved?.variant_id ?? null,
+      resolution_confidence: confidence,
+      status
+    })
+    .eq("id", sessionId);
+
+  if (upErr) {
+    return NextResponse.json({ error: upErr.message }, { status: 400 });
+  }
 
   return NextResponse.json({
     status,
     sessionId,
     confidence,
     extracted,
-    match: match ?? null,
-    suggestions: match ? [] : [],
+    match: resolved ?? null,
+    suggestions: resolved ? [] : []
   });
 }
 
-async function resolveVariant(supabase: any, extracted: any) {
-  // find product
+async function resolveVariant(supabase: any, ex: Extracted) {
+  // A) barcode match (hvis vi får ean senere)
+  if (ex.ean) {
+    const { data: rows } = await supabase
+      .from("product_barcodes")
+      .select("variant_id, product_variants(id, size_g, form, intensity, arabica_pct, organic, products(id, brand, line, name))")
+      .eq("ean", ex.ean)
+      .limit(1);
+
+    const hit = rows?.[0];
+    if (hit?.product_variants?.products) {
+      const p = hit.product_variants.products;
+      const v = hit.product_variants;
+      return {
+        product_id: p.id,
+        variant_id: v.id,
+        brand: p.brand,
+        line: p.line,
+        name: p.name,
+        size_g: v.size_g,
+        form: v.form,
+        intensity: v.intensity,
+        arabica_pct: v.arabica_pct,
+        organic: v.organic
+      };
+    }
+  }
+
+  // B) fuzzy på product (brand + name)
+  const brandQ = ex.brand ? `%${ex.brand}%` : "%";
+  const nameQ = ex.name ? `%${ex.name}%` : "%";
+
   const { data: products } = await supabase
     .from("products")
     .select("id, brand, line, name")
-    .ilike("brand", `%${extracted.brand}%`)
-    .ilike("name", `%${extracted.name}%`)
+    .ilike("brand", brandQ)
+    .ilike("name", nameQ)
     .limit(5);
 
   if (!products?.length) return null;
 
-  // find best variant by size/form
-  const productId = products[0].id;
+  // C) vælg første product (MVP)
+  const p = products[0];
+
+  // D) find variant der matcher size/form bedst
   const { data: variants } = await supabase
     .from("product_variants")
-    .select("id, product_id, size_g, form, intensity, arabica_pct, organic")
-    .eq("product_id", productId)
-    .limit(10);
+    .select("id, size_g, form, intensity, arabica_pct, organic")
+    .eq("product_id", p.id)
+    .limit(25);
 
-  const v = (variants ?? []).find((x: any) =>
-    (extracted.size_g ? x.size_g === extracted.size_g : true) &&
-    (extracted.form ? x.form === extracted.form : true)
-  );
+  if (!variants?.length) return null;
 
-  if (!v) return null;
+  const best =
+    variants.find((v: any) => (ex.size_g ? v.size_g === ex.size_g : true) && (ex.form ? v.form === ex.form : true)) ??
+    variants[0];
 
   return {
-    product_id: productId,
-    variant_id: v.id,
-    brand: products[0].brand,
-    line: products[0].line,
-    name: products[0].name,
-    size_g: v.size_g,
-    form: v.form,
-    intensity: v.intensity,
-    arabica_pct: v.arabica_pct,
-    organic: v.organic,
+    product_id: p.id,
+    variant_id: best.id,
+    brand: p.brand,
+    line: p.line,
+    name: p.name,
+    size_g: best.size_g,
+    form: best.form,
+    intensity: best.intensity,
+    arabica_pct: best.arabica_pct,
+    organic: best.organic
   };
 }
