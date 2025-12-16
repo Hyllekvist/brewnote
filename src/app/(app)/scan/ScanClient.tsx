@@ -17,11 +17,7 @@ type Match = {
   organic?: boolean | null;
 };
 
-type Suggestion = {
-  variant_id: string;
-  label: string;
-  confidence: number;
-};
+type Suggestion = { variant_id: string; label: string; confidence: number };
 
 type Extracted = {
   brand?: string;
@@ -55,10 +51,7 @@ type VariantDetail = {
 function safeJson(text: string) {
   try { return JSON.parse(text); } catch { return null; }
 }
-
-function pct(n: number) {
-  return `${Math.round(n * 100)}%`;
-}
+const pct = (n: number) => `${Math.round((n ?? 0) * 100)}%`;
 
 export default function ScanClient() {
   const supabase = useMemo(() => supabaseBrowser(), []);
@@ -140,21 +133,18 @@ export default function ScanClient() {
         body: JSON.stringify({ sessionId }),
       });
 
-      if (!procRes.ok) {
-        const text = await procRes.text();
-        const j = safeJson(text);
-        throw new Error(`process ${procRes.status}: ${j?.error ?? text}`);
-      }
+      const text = await procRes.text();
+      const j = safeJson(text);
+      if (!procRes.ok) throw new Error(`process ${procRes.status}: ${j?.error ?? text}`);
 
-      const data: ProcessResult = await procRes.json();
+      const data = j as ProcessResult;
       setResult(data);
       loadEditFromResult(data);
+      setEditOpen(false);
 
       if (data.status === "resolved" && data.match?.variant_id) {
         await loadDetails(data.match.variant_id);
       }
-
-      setEditOpen(false);
     } catch (e: any) {
       setErr(e?.message ?? "Noget gik galt");
     } finally {
@@ -196,10 +186,8 @@ export default function ScanClient() {
     setErr(null);
     setSavedMsg(null);
     setBusy(true);
-
     try {
       await saveExtracted();
-
       const procRes = await fetch("/api/scan/process", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -210,15 +198,12 @@ export default function ScanClient() {
       const j = safeJson(text);
       if (!procRes.ok) throw new Error(`process ${procRes.status}: ${j?.error ?? text}`);
 
-      const data: ProcessResult = j as ProcessResult;
+      const data = j as ProcessResult;
       setResult(data);
       loadEditFromResult(data);
 
-      if (data.status === "resolved" && data.match?.variant_id) {
-        await loadDetails(data.match.variant_id);
-      } else {
-        setDetail(null);
-      }
+      if (data.status === "resolved" && data.match?.variant_id) await loadDetails(data.match.variant_id);
+      else setDetail(null);
     } catch (e: any) {
       setErr(e?.message ?? "Noget gik galt");
     } finally {
@@ -231,7 +216,6 @@ export default function ScanClient() {
     setErr(null);
     setSavedMsg(null);
     setBusy(true);
-
     try {
       await saveExtracted();
 
@@ -300,46 +284,46 @@ export default function ScanClient() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.topbar}>
-        <div className={styles.brandDot} />
-        <div className={styles.brandTitle}>Coffee & Tea</div>
-        <div className={styles.topbarRight}>
-          <button className={styles.iconBtn} aria-label="Theme">
-            ☾
-          </button>
-        </div>
-      </div>
-
-      <div className={styles.header}>
+      <header className={styles.hero}>
         <h1 className={styles.h1}>Scan kaffe/te</h1>
         <p className={styles.sub}>Scan posen → match produkt → gem</p>
-      </div>
+      </header>
 
-      <div className={styles.card}>
-        <div className={styles.scanArea}>
-          <div className={styles.scanIcon}>⌁</div>
-          <div className={styles.scanTitle}>Scan posen</div>
-          <div className={styles.scanHint}>Peg kameraet mod forsiden. Godt lys. Ingen blur.</div>
-
-          <div className={styles.fileRow}>
-            <label className={styles.fileBtn}>
-              Vælg billede
-              <input
-                className={styles.fileInput}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              />
-            </label>
-            <div className={styles.fileName}>{file ? file.name : "Ingen fil valgt"}</div>
-          </div>
-
-          <button className={styles.primaryBtn} onClick={onScan} disabled={!file || busy}>
-            {busy ? "Scanner…" : "Scan"}
-          </button>
+      <section className={`${styles.card} ${styles.scanCard} ${busy ? styles.scanning : ""}`}>
+        <div className={styles.scanTop}>
+          <div className={styles.scanBadge}>AI Scan</div>
+          <div className={styles.scanTitle}>Peg kameraet mod posen</div>
+          <div className={styles.scanHint}>Godt lys. Skarp front. Ingen glare.</div>
         </div>
-      </div>
+
+        <div className={styles.scanFrame}>
+          <div className={styles.frameCorners} aria-hidden="true" />
+          <div className={styles.frameIcon} aria-hidden="true">⌁</div>
+          {busy && <div className={styles.scanSweep} aria-hidden="true" />}
+        </div>
+
+        <div className={styles.controls}>
+          <label className={styles.fileBtn}>
+            Vælg billede
+            <input
+              className={styles.fileInput}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+          </label>
+
+          <div className={styles.fileMeta}>
+            <div className={styles.fileName}>{file ? file.name : "Ingen fil valgt"}</div>
+            <div className={styles.fileSub}>JPG/PNG · Mobilkamera anbefales</div>
+          </div>
+        </div>
+
+        <button className={styles.primaryBtn} onClick={onScan} disabled={!file || busy}>
+          {busy ? "Scanner…" : "Scan"}
+        </button>
+      </section>
 
       {(err || savedMsg) && (
         <div className={styles.noticeWrap}>
@@ -351,16 +335,14 @@ export default function ScanClient() {
       {result && (
         <>
           <div className={styles.pillsRow}>
-            <div className={styles.pillStrong}>
-              Scan færdig · {pct(confidence)}
-            </div>
+            <div className={styles.pillStrong}>Scan færdig · {pct(confidence)}</div>
             <div className={styles.pillSoft}>
               {result.status === "resolved" ? "Resolved" : result.status === "needs_user" ? "Needs input" : "Failed"} · {pct(confidence)}
             </div>
           </div>
 
           {result.match && (
-            <div className={styles.card}>
+            <section className={styles.card}>
               <div className={styles.productTitle}>
                 {result.match.brand} {result.match.line ? `${result.match.line} ` : ""}{result.match.name}
               </div>
@@ -372,11 +354,11 @@ export default function ScanClient() {
                 {result.match.arabica_pct != null && <div className={styles.metaItem}><span>Arabica</span><b>{result.match.arabica_pct}%</b></div>}
                 {result.match.organic != null && <div className={styles.metaItem}><span>Organic</span><b>{result.match.organic ? "Ja" : "Nej"}</b></div>}
               </div>
-            </div>
+            </section>
           )}
 
           {detail && (
-            <div className={styles.card}>
+            <section className={styles.card}>
               <div className={styles.sectionTitle}>Produkt-info</div>
 
               <div className={styles.infoRow}>
@@ -400,12 +382,12 @@ export default function ScanClient() {
               <button className={styles.secondaryBtn} onClick={onSaveToInventory} disabled={busy || !canSaveInventory}>
                 {busy ? "Gemmer…" : "Gem i inventory"}
               </button>
-            </div>
+            </section>
           )}
 
-          <div className={styles.card}>
+          <section className={styles.card}>
             <button className={styles.accordionHeader} onClick={() => setEditOpen((v) => !v)}>
-              <span>Ret info (MVP)</span>
+              <span>Ret info</span>
               <span className={styles.chev}>{editOpen ? "▴" : "▾"}</span>
             </button>
 
@@ -428,11 +410,7 @@ export default function ScanClient() {
 
                 <label className={styles.field}>
                   <span>Størrelse (g)</span>
-                  <input
-                    inputMode="numeric"
-                    value={edit.size_g ?? ""}
-                    onChange={(e) => setEdit((p) => ({ ...p, size_g: e.target.value ? Number(e.target.value) : undefined }))}
-                  />
+                  <input inputMode="numeric" value={edit.size_g ?? ""} onChange={(e) => setEdit((p) => ({ ...p, size_g: e.target.value ? Number(e.target.value) : undefined }))} />
                 </label>
 
                 <label className={styles.field}>
@@ -465,11 +443,10 @@ export default function ScanClient() {
                 </div>
               </div>
             )}
-          </div>
+          </section>
         </>
       )}
 
-      {/* Sticky action (mobile) */}
       <div className={styles.sticky}>
         <button className={styles.stickyBtn} onClick={onScan} disabled={!file || busy}>
           {busy ? "Scanner…" : "Scan"}
