@@ -1,12 +1,28 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@supabase/ssr";
 
 export async function GET() {
-  // init-only ping
-  const ok = Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-  return NextResponse.json({ ok, supabase: Boolean(supabase) });
+  if (!url || !anon) {
+    return NextResponse.json(
+      { ok: false, error: "Missing env vars" },
+      { status: 500 }
+    );
+  }
+
+  // Server-safe init
+  createClient(url, anon, {
+    cookies: {
+      getAll() {
+        return [];
+      },
+      setAll() {
+        /* no-op for health */
+      },
+    },
+  });
+
+  return NextResponse.json({ ok: true, supabase: "server client ok" });
 }
