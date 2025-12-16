@@ -1,0 +1,28 @@
+.root {
+  min-height: 100vh;
+  padding: 24px;
+  background: var(--bg);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 24px;
+  text-align: center;
+}
+
+.h2 {
+  font-size: 24px;
+}
+
+.sub {
+  opacity: 0.6;
+}
+
+.primary {
+  height: 56px;
+  border-radius: 14px;
+  background: var(--accent);
+  color: #000;
+  font-size: 16px;
+  font-weight: 600;
+}
