@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import styles from "./BarClient.module.css";
+import styles from "./Bar.module.css";
 
 type Item = {
   id: string;
