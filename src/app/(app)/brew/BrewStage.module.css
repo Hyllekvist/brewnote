@@ -163,3 +163,34 @@
     transform: scale(1.01);
   }
 }
+
+@media (min-width: 900px) {
+  .root {
+    padding-top: 96px;
+  }
+
+  .header {
+    margin-top: 18px;
+  }
+
+  .instruction {
+    font-size: 22px;
+  }
+
+  .ring {
+    width: 300px;
+    height: 300px;
+  }
+
+  .center {
+    font-size: 52px;
+  }
+
+  .ringWrap {
+    padding: 18px 0;
+  }
+
+  .meta {
+    margin-bottom: 24px;
+  }
+}
