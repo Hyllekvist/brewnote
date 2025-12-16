@@ -1,30 +1,29 @@
 import { NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
-  const body = await req.json();
-  const variantId = body?.variantId as string | undefined;
+  const { userKey, variantId, qty } = await req.json();
 
-  if (!variantId) {
-    return NextResponse.json({ error: "Missing variantId" }, { status: 400 });
+  if (!userKey || !variantId) {
+    return NextResponse.json({ error: "Missing userKey/variantId" }, { status: 400 });
   }
 
-  const supabase = supabaseServer();
+  const q = Number.isFinite(Number(qty)) ? Math.max(1, Number(qty)) : 1;
 
-  // MVP uden login: vi gemmer bare variant_id + qty
-  // (tilføj user_id senere når du vil have login)
+  const supabase = supabaseAdmin();
+
   const { data, error } = await supabase
     .from("inventory")
-    .insert({
-      variant_id: variantId,
-      qty: 1,
-    })
-    .select("*")
+    .upsert(
+      { user_key: userKey, variant_id: variantId, qty: q },
+      { onConflict: "user_key,variant_id" }
+    )
+    .select("user_key,variant_id,qty")
     .single();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  return NextResponse.json({ ok: true, row: data });
+  return NextResponse.json({ ok: true, item: data });
 }
