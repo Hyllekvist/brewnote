@@ -469,12 +469,12 @@
   font: inherit;
 }
 
+
 .skipBtn {
   height: 44px;
-  width: 100%;
   border-radius: 999px;
-  background: rgba(255,255,255,0.10);
   border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.08);
   color: rgba(255,255,255,0.85);
   font-weight: 800;
 }
