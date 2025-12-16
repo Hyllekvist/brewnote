@@ -11,10 +11,19 @@ type Item = {
   created_at: string;
 };
 
-function productHref(slug: string) {
+function productType(slug: string): "tea" | "coffee" {
   const s = slug.toLowerCase();
   const isTea = s.startsWith("tea-") || s.includes("tea") || s.includes("matcha");
-  return isTea ? `/teas/${slug}` : `/coffees/${slug}`;
+  return isTea ? "tea" : "coffee";
+}
+
+function productHref(slug: string) {
+  return productType(slug) === "tea" ? `/teas/${slug}` : `/coffees/${slug}`;
+}
+
+function brewHref(slug: string) {
+  const type = productType(slug);
+  return `/brew?type=${type}&slug=${encodeURIComponent(slug)}`;
 }
 
 function prettyName(slug: string) {
@@ -38,46 +47,87 @@ export function BarClient() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  const userKey = useMemo(() => (typeof window === "undefined" ? "server" : getUserKey()), []);
+  const userKey = useMemo(
+    () => (typeof window === "undefined" ? "server" : getUserKey()),
+    []
+  );
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      if (!url || !anon) throw new Error("Missing Supabase env vars");
+
+      const res = await fetch(
+        `${url}/rest/v1/inventory?select=id,user_key,product_slug,created_at&user_key=eq.${encodeURIComponent(
+          userKey
+        )}&order=created_at.desc`,
+        {
+          headers: { apikey: anon, Authorization: `Bearer ${anon}` },
+          cache: "no-store",
+        }
+      );
+
+      const text = await res.text();
+      if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
+
+      setItems(JSON.parse(text) as Item[]);
+    } catch (e: any) {
+      setError(e?.message || "Kunne ikke hente Bar");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-        const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-        if (!url || !anon) throw new Error("Missing Supabase env vars");
-
-        const res = await fetch(
-          `${url}/rest/v1/inventory?select=id,user_key,product_slug,created_at&user_key=eq.${encodeURIComponent(
-            userKey
-          )}&order=created_at.desc`,
-          {
-            headers: {
-              apikey: anon,
-              Authorization: `Bearer ${anon}`,
-            },
-            cache: "no-store",
-          }
-        );
-
-        const text = await res.text();
-        if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
-
-        setItems(JSON.parse(text) as Item[]);
-      } catch (e: any) {
-        setError(e?.message || "Kunne ikke hente Bar");
-      } finally {
-        setLoading(false);
-      }
-    }
-
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userKey]);
+
+  async function removeItem(id: string) {
+    setBusyId(id);
+    setError(null);
+
+    try {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      if (!url || !anon) throw new Error("Missing Supabase env vars");
+
+      // optimistic UI
+      const prev = items;
+      setItems((x) => x.filter((i) => i.id !== id));
+
+      const res = await fetch(
+        `${url}/rest/v1/inventory?id=eq.${encodeURIComponent(
+          id
+        )}&user_key=eq.${encodeURIComponent(userKey)}`,
+        {
+          method: "DELETE",
+          headers: {
+            apikey: anon,
+            Authorization: `Bearer ${anon}`,
+            Prefer: "return=minimal",
+          },
+        }
+      );
+
+      if (!res.ok) {
+        const text = await res.text();
+        // rollback
+        setItems(prev);
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+    } catch (e: any) {
+      setError(e?.message || "Kunne ikke fjerne item");
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   if (loading) return <div className={styles.state}>Indlæser…</div>;
 
@@ -107,11 +157,30 @@ export function BarClient() {
   return (
     <div className={styles.grid}>
       {items.map((it) => (
-        <Link key={it.id} href={productHref(it.product_slug)} className={styles.card}>
-          <div className={styles.cardMeta}>Tilføjet</div>
+        <div key={it.id} className={styles.card}>
+          <div className={styles.cardMeta}>I din bar</div>
           <div className={styles.cardTitle}>{prettyName(it.product_slug)}</div>
-          <div className={styles.cardHint}>Åbn produkt →</div>
-        </Link>
+
+          <div className={styles.actions}>
+            <Link className={styles.primaryBtn} href={brewHref(it.product_slug)}>
+              Bryg nu
+            </Link>
+
+            <Link className={styles.ghostBtn} href={productHref(it.product_slug)}>
+              Åbn produkt
+            </Link>
+
+            <button
+              type="button"
+              className={styles.dangerBtn}
+              onClick={() => removeItem(it.id)}
+              disabled={busyId === it.id}
+              aria-busy={busyId === it.id}
+            >
+              {busyId === it.id ? "Fjerner…" : "Fjern"}
+            </button>
+          </div>
+        </div>
       ))}
     </div>
   );
