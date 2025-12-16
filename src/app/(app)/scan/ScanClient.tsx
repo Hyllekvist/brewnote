@@ -17,7 +17,7 @@ type Match = {
 };
 
 type Suggestion = {
-  variant_id: string;
+  variant_id: string; // kan være "" hvis “ingen varianter”
   label: string;
   confidence: number;
 };
@@ -90,9 +90,8 @@ export default function ScanClient() {
     if (!file) return;
 
     setBusy(true);
-
     try {
-      // 1) start scan
+      // 1) start
       const startRes = await fetch("/api/scan/start", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -109,9 +108,11 @@ export default function ScanClient() {
       }
 
       const { sessionId, uploadPath } = await startRes.json();
-      if (!sessionId || !uploadPath) throw new Error("start: missing sessionId/uploadPath");
+      if (!sessionId || !uploadPath) {
+        throw new Error("start: missing sessionId/uploadPath");
+      }
 
-      // 2) upload image
+      // 2) upload
       const { error: upErr } = await supabase.storage
         .from("scans")
         .upload(uploadPath, file, {
@@ -149,7 +150,6 @@ export default function ScanClient() {
 
     setErr(null);
     setBusy(true);
-
     try {
       const res = await fetch("/api/scan/resolve", {
         method: "POST",
@@ -186,7 +186,6 @@ export default function ScanClient() {
 
     setErr(null);
     setBusy(true);
-
     try {
       // 1) save extracted
       const updRes = await fetch("/api/scan/update-extracted", {
@@ -200,8 +199,10 @@ export default function ScanClient() {
             name: edit.name?.trim() || undefined,
             size_g: edit.size_g ? Number(edit.size_g) : undefined,
             form: edit.form,
-            intensity: edit.intensity != null ? Number(edit.intensity) : undefined,
-            arabica_pct: edit.arabica_pct != null ? Number(edit.arabica_pct) : undefined,
+            intensity:
+              edit.intensity != null ? Number(edit.intensity) : undefined,
+            arabica_pct:
+              edit.arabica_pct != null ? Number(edit.arabica_pct) : undefined,
             organic: edit.organic,
           },
         }),
@@ -212,7 +213,7 @@ export default function ScanClient() {
         throw new Error(`update-extracted ${updRes.status}: ${text}`);
       }
 
-      // 2) run process again (now it should use session.extracted)
+      // 2) process again
       const procRes = await fetch("/api/scan/process", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -234,6 +235,44 @@ export default function ScanClient() {
       setBusy(false);
     }
   }
+
+  // ✅ A: Create product + variant from extracted (crowd DB)
+  async function onCreateFromExtracted() {
+    if (!result?.sessionId) return;
+
+    setErr(null);
+    setBusy(true);
+    try {
+      const res = await fetch("/api/scan/create-product-from-extracted", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sessionId: result.sessionId }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        const j = safeJson(text);
+        throw new Error(`create-product ${res.status}: ${j?.error ?? text}`);
+      }
+
+      const data = await res.json();
+
+      setResult((prev) => ({
+        ...(prev ?? ({} as any)),
+        status: "resolved",
+        confidence: data.confidence ?? 0.92,
+        match: data.match ?? null,
+        suggestions: [],
+      }));
+    } catch (e: any) {
+      setErr(e?.message ?? "Noget gik galt");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const hasMinForCreate =
+    (edit.brand?.trim() ?? "").length > 0 && (edit.name?.trim() ?? "").length > 0;
 
   return (
     <div style={{ maxWidth: 820, margin: "0 auto", padding: 16 }}>
@@ -272,19 +311,27 @@ export default function ScanClient() {
             <b>{Math.round(result.confidence * 100)}%</b>
           </div>
 
-          {/* Result */}
           {result.status === "resolved" && result.match && (
             <>
               <h3 style={{ marginTop: 10 }}>
-                {result.match.brand} {result.match.line ? `${result.match.line} ` : ""}
+                {result.match.brand}{" "}
+                {result.match.line ? `${result.match.line} ` : ""}
                 {result.match.name}
               </h3>
               <ul style={{ marginTop: 8 }}>
-                {result.match.size_g != null && <li>Størrelse: {result.match.size_g}g</li>}
+                {result.match.size_g != null && (
+                  <li>Størrelse: {result.match.size_g}g</li>
+                )}
                 {result.match.form && <li>Form: {result.match.form}</li>}
-                {result.match.intensity != null && <li>Intensitet: {result.match.intensity}/10</li>}
-                {result.match.arabica_pct != null && <li>Arabica: {result.match.arabica_pct}%</li>}
-                {result.match.organic != null && <li>Organic: {result.match.organic ? "Ja" : "Nej"}</li>}
+                {result.match.intensity != null && (
+                  <li>Intensitet: {result.match.intensity}/10</li>
+                )}
+                {result.match.arabica_pct != null && (
+                  <li>Arabica: {result.match.arabica_pct}%</li>
+                )}
+                {result.match.organic != null && (
+                  <li>Organic: {result.match.organic ? "Ja" : "Nej"}</li>
+                )}
               </ul>
             </>
           )}
@@ -298,9 +345,15 @@ export default function ScanClient() {
               {(result.suggestions ?? []).length > 0 && (
                 <ul style={{ margin: "0 0 12px", paddingLeft: 18 }}>
                   {(result.suggestions ?? []).map((s) => (
-                    <li key={s.variant_id || s.label} style={{ marginBottom: 8 }}>
+                    <li
+                      key={s.variant_id || s.label}
+                      style={{ marginBottom: 8 }}
+                    >
                       {s.variant_id ? (
-                        <button onClick={() => onResolve(s.variant_id)} disabled={busy}>
+                        <button
+                          onClick={() => onResolve(s.variant_id)}
+                          disabled={busy}
+                        >
                           Vælg: {s.label} ({Math.round(s.confidence * 100)}%)
                         </button>
                       ) : (
@@ -316,15 +369,31 @@ export default function ScanClient() {
           )}
 
           {/* Manual edit extracted */}
-          <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #222" }}>
-            <div style={{ fontWeight: 600, marginBottom: 10 }}>Ret info (MVP)</div>
+          <div
+            style={{
+              marginTop: 14,
+              paddingTop: 12,
+              borderTop: "1px solid #222",
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 10 }}>
+              Ret info (MVP)
+            </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 10,
+              }}
+            >
               <label style={{ display: "grid", gap: 6 }}>
                 <span style={{ fontSize: 12, opacity: 0.8 }}>Brand</span>
                 <input
                   value={edit.brand ?? ""}
-                  onChange={(e) => setEdit((p) => ({ ...p, brand: e.target.value }))}
+                  onChange={(e) =>
+                    setEdit((p) => ({ ...p, brand: e.target.value }))
+                  }
                 />
               </label>
 
@@ -332,7 +401,9 @@ export default function ScanClient() {
                 <span style={{ fontSize: 12, opacity: 0.8 }}>Line</span>
                 <input
                   value={edit.line ?? ""}
-                  onChange={(e) => setEdit((p) => ({ ...p, line: e.target.value }))}
+                  onChange={(e) =>
+                    setEdit((p) => ({ ...p, line: e.target.value }))
+                  }
                 />
               </label>
 
@@ -340,7 +411,9 @@ export default function ScanClient() {
                 <span style={{ fontSize: 12, opacity: 0.8 }}>Name</span>
                 <input
                   value={edit.name ?? ""}
-                  onChange={(e) => setEdit((p) => ({ ...p, name: e.target.value }))}
+                  onChange={(e) =>
+                    setEdit((p) => ({ ...p, name: e.target.value }))
+                  }
                 />
               </label>
 
@@ -362,7 +435,9 @@ export default function ScanClient() {
                 <span style={{ fontSize: 12, opacity: 0.8 }}>Form</span>
                 <select
                   value={edit.form ?? "beans"}
-                  onChange={(e) => setEdit((p) => ({ ...p, form: e.target.value as any }))}
+                  onChange={(e) =>
+                    setEdit((p) => ({ ...p, form: e.target.value as any }))
+                  }
                 >
                   <option value="beans">beans</option>
                   <option value="ground">ground</option>
@@ -373,7 +448,11 @@ export default function ScanClient() {
                 <span style={{ fontSize: 12, opacity: 0.8 }}>Organic</span>
                 <select
                   value={
-                    edit.organic === undefined ? "" : edit.organic ? "true" : "false"
+                    edit.organic === undefined
+                      ? ""
+                      : edit.organic
+                      ? "true"
+                      : "false"
                   }
                   onChange={(e) =>
                     setEdit((p) => ({
@@ -392,9 +471,25 @@ export default function ScanClient() {
               </label>
             </div>
 
-            <div style={{ marginTop: 12 }}>
-              <button onClick={onSaveExtractedAndRetry} disabled={busy || !result?.sessionId}>
+            <div style={{ marginTop: 12, display: "flex", gap: 10 }}>
+              <button
+                onClick={onSaveExtractedAndRetry}
+                disabled={busy || !result?.sessionId}
+              >
                 {busy ? "Arbejder..." : "Gem & match igen"}
+              </button>
+
+              {/* ✅ A: Create product */}
+              <button
+                onClick={onCreateFromExtracted}
+                disabled={busy || !result?.sessionId || !hasMinForCreate}
+                title={
+                  hasMinForCreate
+                    ? ""
+                    : "Udfyld mindst brand + name før du opretter"
+                }
+              >
+                Opret som nyt produkt
               </button>
             </div>
           </div>
