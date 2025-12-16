@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 function getUserKey() {
   if (typeof window === "undefined") return "server";
@@ -21,14 +21,23 @@ export function useBarCount() {
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
+  const aliveRef = useRef(true);
+  const inFlightRef = useRef(false);
+  const debounceRef = useRef<number | null>(null);
+
+  const loadNow = useCallback(async () => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+
     try {
       const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
       const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
       if (!url || !anon) throw new Error("Missing Supabase env vars");
 
       const res = await fetch(
-        `${url}/rest/v1/inventory?select=id&user_key=eq.${encodeURIComponent(userKey)}`,
+        `${url}/rest/v1/inventory?select=id&user_key=eq.${encodeURIComponent(
+          userKey
+        )}`,
         {
           headers: {
             apikey: anon,
@@ -42,23 +51,42 @@ export function useBarCount() {
 
       const text = await res.text();
       if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
+
       const rows = text ? (JSON.parse(text) as Array<{ id: string }>) : [];
-      setCount(rows.length);
+      if (aliveRef.current) setCount(rows.length);
     } catch {
-      // badge er nice-to-have, så vi fejler “silent”
-      setCount(0);
+      // badge er nice-to-have -> fail silent
+      if (aliveRef.current) setCount(0);
     } finally {
-      setLoading(false);
+      if (aliveRef.current) setLoading(false);
+      inFlightRef.current = false;
     }
   }, [userKey]);
 
+  const refresh = useCallback(() => {
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(() => {
+      loadNow();
+    }, 120);
+  }, [loadNow]);
+
   useEffect(() => {
-    load();
+    aliveRef.current = true;
+    loadNow();
 
-    const onChange = () => load();
-    window.addEventListener("brewnote_bar_changed", onChange);
-    return () => window.removeEventListener("brewnote_bar_changed", onChange);
-  }, [load]);
+    const onAnyChange = () => refresh();
 
-  return { count, loading, refresh: load };
+    // ✅ centraliseret: alle steder kan bare dispatch'e disse
+    window.addEventListener("brewnote_bar_changed", onAnyChange);
+    window.addEventListener("brewnote_brew_logged", onAnyChange);
+
+    return () => {
+      aliveRef.current = false;
+      window.removeEventListener("brewnote_bar_changed", onAnyChange);
+      window.removeEventListener("brewnote_brew_logged", onAnyChange);
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [loadNow, refresh]);
+
+  return { count, loading, refresh };
 }
