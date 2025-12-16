@@ -43,6 +43,18 @@ function getUserKey() {
   return newKey;
 }
 
+// Stable pseudo-DNA per slug (0..1). Replacer med rigtig product-dna senere.
+function pseudoDNA(slug: string) {
+  let h = 0;
+  for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) >>> 0;
+  const a = ((h % 1000) / 1000); // 0..1
+  const b = (((h >> 10) % 1000) / 1000);
+  const s = (((h >> 20) % 1000) / 1000);
+  // lidt “snappier” (undgå for lave bars)
+  const clamp = (x: number) => Math.max(0.22, Math.min(0.92, x));
+  return { acid: clamp(a), body: clamp(b), sweet: clamp(s) };
+}
+
 export function BarClient() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +110,6 @@ export function BarClient() {
       const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
       if (!url || !anon) throw new Error("Missing Supabase env vars");
 
-      // optimistic UI
       const prev = items;
       setItems((x) => x.filter((i) => i.id !== id));
 
@@ -118,7 +129,6 @@ export function BarClient() {
 
       if (!res.ok) {
         const text = await res.text();
-        // rollback
         setItems(prev);
         throw new Error(text || `HTTP ${res.status}`);
       }
@@ -156,42 +166,67 @@ export function BarClient() {
 
   return (
     <div className={styles.grid}>
-      {items.map((it) => (
-        <div key={it.id} className={styles.card}>
-          <div className={styles.cardTop}>
-            <div>
-              <div className={styles.cardMeta}>I din bar</div>
-              <div className={styles.cardTitle}>{prettyName(it.product_slug)}</div>
+      {items.map((it) => {
+        const dna = pseudoDNA(it.product_slug);
+        return (
+          <div key={it.id} className={styles.card}>
+            <div className={styles.cardTop}>
+              <div>
+                <div className={styles.cardMeta}>I din bar</div>
+                <div className={styles.cardTitle}>{prettyName(it.product_slug)}</div>
+              </div>
+
+              <div className={styles.badge}>
+                {productType(it.product_slug) === "tea" ? "TE" : "KAFFE"}
+              </div>
             </div>
 
-            <div className={styles.badge}>
-              {productType(it.product_slug) === "tea" ? "TE" : "KAFFE"}
+            {/* mini DNA */}
+            <div className={styles.miniDNA} aria-label="Mini Brew DNA">
+              <div className={styles.miniRow}>
+                <span className={styles.miniLabel}>Syre</span>
+                <span className={styles.miniTrack}>
+                  <span className={styles.miniFill} style={{ width: `${dna.acid * 100}%` }} />
+                </span>
+              </div>
+              <div className={styles.miniRow}>
+                <span className={styles.miniLabel}>Krop</span>
+                <span className={styles.miniTrack}>
+                  <span className={styles.miniFill} style={{ width: `${dna.body * 100}%` }} />
+                </span>
+              </div>
+              <div className={styles.miniRow}>
+                <span className={styles.miniLabel}>Sødme</span>
+                <span className={styles.miniTrack}>
+                  <span className={styles.miniFill} style={{ width: `${dna.sweet * 100}%` }} />
+                </span>
+              </div>
+            </div>
+
+            <div className={styles.actions}>
+              <Link className={styles.primaryBtn} href={brewHref(it.product_slug)}>
+                Bryg nu
+              </Link>
+
+              <Link className={styles.ghostBtn} href={productHref(it.product_slug)}>
+                Åbn produkt
+              </Link>
+
+              <button
+                type="button"
+                className={styles.iconBtn}
+                onClick={() => removeItem(it.id)}
+                disabled={busyId === it.id}
+                aria-busy={busyId === it.id}
+                aria-label="Fjern fra bar"
+                title="Fjern"
+              >
+                {busyId === it.id ? "…" : "✕"}
+              </button>
             </div>
           </div>
-
-          <div className={styles.actions}>
-            <Link className={styles.primaryBtn} href={brewHref(it.product_slug)}>
-              Bryg nu
-            </Link>
-
-            <Link className={styles.ghostBtn} href={productHref(it.product_slug)}>
-              Åbn produkt
-            </Link>
-
-            <button
-              type="button"
-              className={styles.iconBtn}
-              onClick={() => removeItem(it.id)}
-              disabled={busyId === it.id}
-              aria-busy={busyId === it.id}
-              aria-label="Fjern fra bar"
-              title="Fjern"
-            >
-              {busyId === it.id ? "…" : "✕"}
-            </button>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
