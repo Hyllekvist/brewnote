@@ -11,6 +11,11 @@ type Item = {
   created_at: string;
 };
 
+type FeedbackRow = {
+  product_slug: string;
+  preference: "like" | "dislike";
+};
+
 function productType(slug: string): "tea" | "coffee" {
   const s = slug.toLowerCase();
   const isTea = s.startsWith("tea-") || s.includes("tea") || s.includes("matcha");
@@ -47,16 +52,70 @@ function getUserKey() {
 function pseudoDNA(slug: string) {
   let h = 0;
   for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) >>> 0;
-  const a = ((h % 1000) / 1000); // 0..1
-  const b = (((h >> 10) % 1000) / 1000);
-  const s = (((h >> 20) % 1000) / 1000);
-  // lidt “snappier” (undgå for lave bars)
+  const a = (h % 1000) / 1000;
+  const b = ((h >> 10) % 1000) / 1000;
+  const s = ((h >> 20) % 1000) / 1000;
   const clamp = (x: number) => Math.max(0.22, Math.min(0.92, x));
   return { acid: clamp(a), body: clamp(b), sweet: clamp(s) };
 }
 
+function supaEnv() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anon) throw new Error("Missing Supabase env vars");
+  return { url, anon };
+}
+
+async function sbGet(path: string, userKey: string) {
+  const { url, anon } = supaEnv();
+  const res = await fetch(`${url}${path}`, {
+    method: "GET",
+    headers: {
+      apikey: anon,
+      Authorization: `Bearer ${anon}`,
+      "Content-Type": "application/json",
+      "x-user-key": userKey, // ✅ RLS
+    },
+    cache: "no-store",
+  });
+
+  const text = await res.text();
+  if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
+  return text ? JSON.parse(text) : null;
+}
+
+async function sbDelete(path: string, userKey: string) {
+  const { url, anon } = supaEnv();
+  const res = await fetch(`${url}${path}`, {
+    method: "DELETE",
+    headers: {
+      apikey: anon,
+      Authorization: `Bearer ${anon}`,
+      Prefer: "return=minimal",
+      "x-user-key": userKey, // ✅ RLS
+    },
+  });
+
+  const text = await res.text();
+  if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
+  return null;
+}
+
+type ViewRow = Item & { pref?: "like" | "dislike" };
+
+function prefRank(p?: "like" | "dislike") {
+  // likes først, så null, så dislikes
+  if (p === "like") return 0;
+  if (!p) return 1;
+  return 2;
+}
+
 export function BarClient() {
   const [items, setItems] = useState<Item[]>([]);
+  const [feedback, setFeedback] = useState<Record<string, "like" | "dislike">>(
+    {}
+  );
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -71,24 +130,31 @@ export function BarClient() {
     setError(null);
 
     try {
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-      if (!url || !anon) throw new Error("Missing Supabase env vars");
-
-      const res = await fetch(
-        `${url}/rest/v1/inventory?select=id,user_key,product_slug,created_at&user_key=eq.${encodeURIComponent(
+      // inventory
+      const inv = (await sbGet(
+        `/rest/v1/inventory?select=id,user_key,product_slug,created_at&user_key=eq.${encodeURIComponent(
           userKey
         )}&order=created_at.desc`,
-        {
-          headers: { apikey: anon, Authorization: `Bearer ${anon}` },
-          cache: "no-store",
+        userKey
+      )) as Item[];
+
+      // feedback (kun preference + slug)
+      const fb = (await sbGet(
+        `/rest/v1/product_feedback?select=product_slug,preference&user_key=eq.${encodeURIComponent(
+          userKey
+        )}`,
+        userKey
+      )) as FeedbackRow[];
+
+      const map: Record<string, "like" | "dislike"> = {};
+      for (const r of fb || []) {
+        if (r?.product_slug && (r.preference === "like" || r.preference === "dislike")) {
+          map[r.product_slug] = r.preference;
         }
-      );
+      }
 
-      const text = await res.text();
-      if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
-
-      setItems(JSON.parse(text) as Item[]);
+      setItems(inv || []);
+      setFeedback(map);
     } catch (e: any) {
       setError(e?.message || "Kunne ikke hente Bar");
     } finally {
@@ -106,34 +172,19 @@ export function BarClient() {
     setError(null);
 
     try {
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-      if (!url || !anon) throw new Error("Missing Supabase env vars");
-
       const prev = items;
       setItems((x) => x.filter((i) => i.id !== id));
 
-      const res = await fetch(
-        `${url}/rest/v1/inventory?id=eq.${encodeURIComponent(
+      await sbDelete(
+        `/rest/v1/inventory?id=eq.${encodeURIComponent(
           id
         )}&user_key=eq.${encodeURIComponent(userKey)}`,
-        {
-          method: "DELETE",
-          headers: {
-            apikey: anon,
-            Authorization: `Bearer ${anon}`,
-            Prefer: "return=minimal",
-          },
-        }
+        userKey
       );
-
-      if (!res.ok) {
-        const text = await res.text();
-        setItems(prev);
-        throw new Error(text || `HTTP ${res.status}`);
-      }
     } catch (e: any) {
       setError(e?.message || "Kunne ikke fjerne item");
+      // (valgfrit: reload for at synce)
+      load();
     } finally {
       setBusyId(null);
     }
@@ -164,16 +215,44 @@ export function BarClient() {
       </div>
     );
 
+  const rows: ViewRow[] = items
+    .map((it) => ({ ...it, pref: feedback[it.product_slug] }))
+    .sort((a, b) => {
+      const ra = prefRank(a.pref);
+      const rb = prefRank(b.pref);
+      if (ra !== rb) return ra - rb;
+      // sekundært: nyeste først
+      return b.created_at.localeCompare(a.created_at);
+    });
+
   return (
     <div className={styles.grid}>
-      {items.map((it) => {
+      {rows.map((it) => {
         const dna = pseudoDNA(it.product_slug);
+        const pref = it.pref;
+
         return (
           <div key={it.id} className={styles.card}>
             <div className={styles.cardTop}>
               <div>
                 <div className={styles.cardMeta}>I din bar</div>
                 <div className={styles.cardTitle}>{prettyName(it.product_slug)}</div>
+
+                {/* preference pill */}
+                {pref ? (
+                  <div
+                    className={[
+                      styles.prefPill,
+                      pref === "like" ? styles.prefLike : styles.prefDislike,
+                    ].join(" ")}
+                    aria-label={pref === "like" ? "Du kan lide den" : "Du kan ikke lide den"}
+                  >
+                    <span className={styles.prefIcon}>{pref === "like" ? "👍" : "👎"}</span>
+                    <span>{pref === "like" ? "Matcher dig" : "Ikke for dig"}</span>
+                  </div>
+                ) : (
+                  <div className={styles.prefPillGhost}>Ingen feedback endnu</div>
+                )}
               </div>
 
               <div className={styles.badge}>
