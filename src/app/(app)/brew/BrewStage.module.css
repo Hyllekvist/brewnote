@@ -1,0 +1,72 @@
+.root {
+  min-height: 100vh;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.header {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.kicker {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  font-size: 12px;
+}
+
+.instruction {
+  font-size: 18px;
+  margin-top: 8px;
+}
+
+.ringWrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ring {
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  border: 3px solid var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.center {
+  font-size: 32px;
+  font-variant-numeric: tabular-nums;
+}
+
+.meta {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.metaPill {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 12px;
+}
+
+.hint {
+  text-align: center;
+  opacity: 0.4;
+  font-size: 12px;
+}
+
+/* Phase hooks – tomme med vilje */
+.phase_bloom {}
+.phase_pour {}
+.phase_finish {}
