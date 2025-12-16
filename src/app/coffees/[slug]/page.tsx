@@ -3,7 +3,11 @@ import ProductScreen from "@/components/ProductScreen/ProductScreen";
 
 export const dynamic = "force-static";
 
-export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
+export function generateMetadata({
+  params,
+}: {
+  params: { slug: string };
+}): Metadata {
   const name = decodeURIComponent(params.slug).replace(/-/g, " ");
   return {
     title: `${name} – BrewNote`,
@@ -18,11 +22,16 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
   };
 }
 
-export default function CoffeeProductPage({ params }: { params: { slug: string } }) {
+export default function CoffeeProductPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
   const name = decodeURIComponent(params.slug).replace(/-/g, " ");
 
   return (
     <ProductScreen
+      slug={params.slug} // ✅ NYT
       name={name}
       meta="Coffee · Origin · Roaster"
       dna={{ acid: 0.45, body: 0.78, sweet: 0.55 }}
@@ -41,9 +50,24 @@ export default function CoffeeProductPage({ params }: { params: { slug: string }
         href: `/brew?type=coffee&slug=${encodeURIComponent(params.slug)}`,
       }}
       variations={[
-        { id: "espresso", method: "Espresso", description: "Mere intensitet og tungere krop.", time: "0:30" },
-        { id: "coldbrew", method: "Cold brew", description: "Mere sødme, mindre bitterhed.", time: "12h" },
-        { id: "aeropress", method: "AeroPress", description: "Renere kop med høj klarhed.", time: "1:45" },
+        {
+          id: "espresso",
+          method: "Espresso",
+          description: "Mere intensitet og tungere krop.",
+          time: "0:30",
+        },
+        {
+          id: "coldbrew",
+          method: "Cold brew",
+          description: "Mere sødme, mindre bitterhed.",
+          time: "12h",
+        },
+        {
+          id: "aeropress",
+          method: "AeroPress",
+          description: "Renere kop med høj klarhed.",
+          time: "1:45",
+        },
       ]}
     />
   );
