@@ -1,249 +1,78 @@
-.page {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 18px 14px 28px;
-}
+.loading { opacity: .75; padding: 10px 2px; }
 
-.header {
-  margin-bottom: 14px;
-}
-
-.h1 {
-  margin: 6px 0 8px;
-  font-size: 24px;
-  letter-spacing: -0.02em;
-}
-
-.sub {
-  margin: 0;
-  opacity: 0.7;
-  font-size: 14px;
-}
-
-.state {
-  opacity: 0.75;
-  padding: 10px 2px;
-}
-
-/* Empty */
-.emptyBox {
-  padding: 14px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.emptyTitle {
-  font-weight: 800;
-  margin-bottom: 6px;
-}
-
-.emptyText {
-  opacity: 0.78;
-  line-height: 1.35;
-}
-
-.emptyCtaRow {
-  margin-top: 10px;
-}
-
-.emptyLink {
-  text-decoration: underline;
-}
-
-/* Error */
-.errorBox {
-  padding: 12px;
-  border-radius: 16px;
-  background: rgba(255, 120, 120, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(255, 120, 120, 0.14);
-}
-
-.errorTitle {
-  font-weight: 800;
-  margin-bottom: 6px;
-}
-
-.errorText {
-  opacity: 0.85;
-  white-space: pre-wrap;
-  font-size: 13px;
-}
-
-/* List (premium) */
 .grid {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   margin-top: 12px;
 }
 
-@media (min-width: 760px) {
-  .grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-  }
-}
-
 .card {
-  padding: 16px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 10px 30px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(10px);
-}
-
-.cardTop {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.cardMeta {
-  font-size: 12px;
-  opacity: 0.65;
-}
-
-.cardTitle {
-  margin-top: 4px;
-  font-weight: 900;
-  letter-spacing: -0.02em;
-  font-size: 18px;
-  text-transform: capitalize;
-}
-
-.badge {
-  padding: 8px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  opacity: 0.9;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-}
-
-.actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 10px;
-}
-
-.primaryBtn {
-  height: 44px;
-  border-radius: 14px;
-  text-decoration: none;
-  font-weight: 900;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.14);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-}
-
-.ghostBtn {
-  height: 44px;
-  border-radius: 14px;
-  text-decoration: none;
-  font-weight: 800;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.92;
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-}
-
-.iconBtn {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  font-weight: 900;
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-  opacity: 0.85;
-}
-
-.iconBtn:disabled {
-  opacity: 0.55;
-}
-
-/* mini DNA */
-.miniDNA {
-  display: grid;
-  gap: 8px;
-  margin: 10px 0 14px;
-  padding: 12px;
   border-radius: 16px;
-  background: rgba(0, 0, 0, 0.18);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.miniRow {
-  display: grid;
-  grid-template-columns: 52px 1fr;
-  align-items: center;
-  gap: 10px;
-}
-
-.miniLabel {
-  font-size: 12px;
-  opacity: 0.7;
-  font-weight: 800;
-}
-
-.miniTrack {
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  background: rgba(255,255,255,0.06);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
   overflow: hidden;
 }
 
-.miniFill {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
+.cardTop{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  padding: 12px 14px 8px;
 }
 
-/* preference pill */
-.prefPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-  padding: 7px 10px;
-  border-radius: 999px;
-  font-size: 12px;
+.small { font-size: 12px; opacity: .65; }
+
+.remove{
+  border: 0;
+  background: rgba(255,255,255,.08);
+  color: inherit;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.remove:disabled{ opacity:.6; cursor: default; }
+
+.cardLink{
+  display:block;
+  padding: 0 14px 14px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.title{
   font-weight: 900;
-  letter-spacing: -0.01em;
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  opacity: 0.95;
+  letter-spacing: -0.02em;
+  margin-top: 2px;
 }
 
-.prefIcon {
-  display: inline-flex;
-  width: 18px;
-  justify-content: center;
-  transform: translateY(-0.5px);
-}
-
-.prefLike {
-  background: rgba(120, 255, 180, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(120, 255, 180, 0.16);
-}
-
-.prefDislike {
-  background: rgba(255, 120, 120, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(255, 120, 120, 0.16);
-}
-
-.prefPillGhost {
-  margin-top: 10px;
+.open{
   font-size: 12px;
-  opacity: 0.55;
+  opacity: .7;
+  margin-top: 8px;
+}
+
+.emptyCard, .errorCard{
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.06);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+}
+
+.emptyTitle, .errorTitle{ font-weight: 900; margin-bottom: 6px; }
+.emptyBody, .errorBody{ opacity: .75; line-height: 1.35; white-space: pre-wrap; }
+
+.emptyActions{ margin-top: 10px; }
+.emptyLink{ text-decoration: underline; color: inherit; }
+
+.retry{
+  margin-top: 10px;
+  border: 0;
+  background: rgba(255,255,255,.10);
+  color: inherit;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 900;
+  cursor: pointer;
 }
