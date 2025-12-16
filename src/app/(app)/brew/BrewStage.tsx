@@ -7,7 +7,7 @@ export type BrewPhase = "bloom" | "pour" | "finish";
 
 export type BrewStep = {
   id: string;
-  label: string; // "Bloom", "Pour 1", "Finish"
+  label: string; // "Bloom", "Pour 1", "Finish" 
   instruction: string; // kort tekst
   seconds?: number; // tidsbaseret step
   targetG?: number; // hvis step har mål
