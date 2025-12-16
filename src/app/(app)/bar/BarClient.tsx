@@ -158,8 +158,16 @@ export function BarClient() {
     <div className={styles.grid}>
       {items.map((it) => (
         <div key={it.id} className={styles.card}>
-          <div className={styles.cardMeta}>I din bar</div>
-          <div className={styles.cardTitle}>{prettyName(it.product_slug)}</div>
+          <div className={styles.cardTop}>
+            <div>
+              <div className={styles.cardMeta}>I din bar</div>
+              <div className={styles.cardTitle}>{prettyName(it.product_slug)}</div>
+            </div>
+
+            <div className={styles.badge}>
+              {productType(it.product_slug) === "tea" ? "TE" : "KAFFE"}
+            </div>
+          </div>
 
           <div className={styles.actions}>
             <Link className={styles.primaryBtn} href={brewHref(it.product_slug)}>
@@ -172,12 +180,14 @@ export function BarClient() {
 
             <button
               type="button"
-              className={styles.dangerBtn}
+              className={styles.iconBtn}
               onClick={() => removeItem(it.id)}
               disabled={busyId === it.id}
               aria-busy={busyId === it.id}
+              aria-label="Fjern fra bar"
+              title="Fjern"
             >
-              {busyId === it.id ? "Fjerner…" : "Fjern"}
+              {busyId === it.id ? "…" : "✕"}
             </button>
           </div>
         </div>
