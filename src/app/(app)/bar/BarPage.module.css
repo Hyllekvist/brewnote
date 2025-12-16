@@ -1,6 +1,5 @@
 .loading { opacity: .75; padding: 10px 2px; }
 
-
 .grid {
   display: grid;
   gap: 10px;
