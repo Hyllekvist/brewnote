@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import styles from "./BrewClient.module.css";
 
 type Step = {
@@ -19,17 +18,13 @@ function formatMMSS(total: number) {
 }
 
 export default function BrewClient({ type, slug }: { type: string; slug: string }) {
-  const router = useRouter();
-
   /* ---------- TITLE ---------- */
-
   const title = useMemo(() => {
     const name = slug ? decodeURIComponent(slug).replace(/-/g, " ") : "Brew Mode";
     return type === "tea" ? `Tea Brew — ${name}` : `Coffee Brew — ${name}`;
   }, [type, slug]);
 
   /* ---------- STEPS (v2 hardcoded) ---------- */
-
   const steps: Step[] = useMemo(
     () => [
       { id: "prep", label: "Prep", instruction: "Skyl filter og varm kop/server. Nulstil vægten.", seconds: 20 },
@@ -47,7 +42,6 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
   );
 
   /* ---------- STATE ---------- */
-
   const [idx, setIdx] = useState(0);
   const [running, setRunning] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -58,8 +52,18 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
   const current = steps[idx];
   const isLast = idx === steps.length - 1;
 
-  /* ---------- TIMER ---------- */
+  /* ---------- REVIEW NAV ---------- */
+  const goToReview = useCallback(() => {
+    const qs = new URLSearchParams({
+      type,
+      slug,
+      seconds: String(elapsed),
+      method: "Pour-over",
+    });
+    window.location.href = `/brew/review?${qs.toString()}`;
+  }, [elapsed, slug, type]);
 
+  /* ---------- TIMER ---------- */
   useEffect(() => {
     if (!running) return;
 
@@ -71,45 +75,34 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
     return () => window.clearInterval(t);
   }, [running]);
 
-  /* ---------- AUTO ADVANCE ---------- */
-
+  /* ---------- AUTO ADVANCE (fortsæt uden at stoppe) ---------- */
   useEffect(() => {
+    if (!running) return;
+
     const limit = current.seconds || 0;
-    if (!running || !limit) return;
+    if (!limit) return;
     if (stepElapsed < limit) return;
 
-    // vibrate hvis mobil
     try {
       navigator.vibrate?.([40, 40, 40]);
     } catch {}
 
-    // sidste step: stop og send til review
     if (isLast) {
       setRunning(false);
-
-      const qs = new URLSearchParams({
-        type,
-        slug,
-        seconds: String(elapsed),
-        method: "Pour-over",
-      });
-
-      router.push(`/brew/review?${qs.toString()}`);
+      goToReview();
       return;
     }
 
-    // ellers: næste step (behold running=true så flow fortsætter)
     setIdx((p) => Math.min(steps.length - 1, p + 1));
     setStepElapsed(0);
-  }, [stepElapsed, running, current.seconds, isLast, elapsed, slug, type, router, steps.length]);
+  }, [running, stepElapsed, current.seconds, isLast, steps.length, goToReview]);
 
-  /* ---------- når idx ændres manuelt ---------- */
+  /* ---------- RESET step timer on manual step change ---------- */
   useEffect(() => {
     setStepElapsed(0);
   }, [idx]);
 
   /* ---------- MANUAL NAV ---------- */
-
   const goPrev = () => {
     setRunning(false);
     setIdx((p) => Math.max(0, p - 1));
@@ -121,15 +114,13 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
   };
 
   /* ---------- PROGRESS ---------- */
-
   const stepSeconds = current.seconds || 0;
   const stepProgress = stepSeconds ? Math.min(1, stepElapsed / stepSeconds) : 0.12;
   const progressDeg = Math.round(stepProgress * 360);
 
-  const primaryValue = current.targetG ? `${current.targetG}g` : isLast ? "Done" : "—";
+  const primaryValue = current.targetG ? `${current.targetG}g` : "—";
 
   /* ---------- COMMAND TEXT ---------- */
-
   const actionLine = useMemo(() => {
     if (current.id === "prep") return "Prep – gør klar og nulstil vægten.";
     if (current.id === "finish") return "Finish – swirl og smag.";
@@ -137,27 +128,19 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
     return current.instruction;
   }, [current]);
 
-  /* ---------- PRIMARY BUTTON ---------- */
-
-  const primaryLabel = isLast && !running ? "Review" : running ? "Pause" : "Start";
-
+  /* ---------- PRIMARY CTA ---------- */
   const onPrimary = () => {
-    // sidste step + ikke kørende = gå til review direkte
+    // På sidste step: hvis vi ikke kører → Review (så knappen giver mening)
     if (isLast && !running) {
-      const qs = new URLSearchParams({
-        type,
-        slug,
-        seconds: String(elapsed),
-        method: "Pour-over",
-      });
-      router.push(`/brew/review?${qs.toString()}`);
+      goToReview();
       return;
     }
     setRunning((v) => !v);
   };
 
-  /* ---------- RENDER ---------- */
+  const primaryText = isLast ? (running ? "Pause" : "Review") : running ? "Pause" : "Start";
 
+  /* ---------- RENDER ---------- */
   return (
     <main className={styles.page}>
       {/* TOP BAR */}
@@ -202,9 +185,10 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
             style={{
               background: `conic-gradient(var(--accent1) 0deg ${progressDeg}deg, rgba(255,255,255,.10) ${progressDeg}deg 360deg)`,
             }}
+            aria-label="Step progress"
           >
             <div className={styles.ringInner}>
-              <div className={styles.bigNumber}>{primaryValue}</div>
+              <div className={styles.bigNumber}>{isLast ? "Done" : primaryValue}</div>
             </div>
           </div>
         </div>
@@ -216,23 +200,22 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
         </p>
 
         <div className={styles.controls}>
-          <button className={styles.btn} onClick={goPrev} disabled={idx === 0}>
+          <button className={styles.btn} onClick={goPrev} disabled={idx === 0} aria-label="Forrige step">
             ←
           </button>
 
           <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={onPrimary}>
-            {primaryLabel}
+            {primaryText}
           </button>
 
-          <button className={styles.btn} onClick={goNext} disabled={isLast}>
+          <button className={styles.btn} onClick={goNext} disabled={idx === steps.length - 1} aria-label="Næste step">
             →
           </button>
         </div>
 
         <div className={styles.microRow}>
           <span>
-            Step tilbage:{" "}
-            <strong>{stepSeconds ? formatMMSS(Math.max(0, stepSeconds - stepElapsed)) : "—"}</strong>
+            Step tilbage: <strong>{stepSeconds ? formatMMSS(Math.max(0, stepSeconds - stepElapsed)) : "—"}</strong>
           </span>
           <span>
             Total: <strong>{formatMMSS(totalSeconds)}</strong>
@@ -242,7 +225,7 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
 
       {/* BOTTOM SHEET */}
       <section className={`${styles.sheet} ${sheetOpen ? styles.sheetOpen : ""}`}>
-        <div className={styles.sheetHandle} onClick={() => setSheetOpen((v) => !v)} />
+        <div className={styles.sheetHandle} onClick={() => setSheetOpen((v) => !v)} role="button" tabIndex={0} />
 
         <div className={styles.stepList}>
           {steps.map((s, i) => (
