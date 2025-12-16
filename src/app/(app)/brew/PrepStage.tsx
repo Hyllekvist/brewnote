@@ -3,30 +3,30 @@
 import styles from "./PrepStage.module.css";
 
 type Props = {
-  title?: string; // fx "Hario V60"
+  title?: string;
   coffeeG: number;
   waterG: number;
-  grind?: string; // fx "Medium-fine"
-  temperatureC?: number; // fx 94
-  ratioLabel?: string; // fx "1:15"
+  grind?: string;
+  temperatureC?: number;
+  ratioLabel?: string;
   onStart: () => void;
   onClose?: () => void;
 };
 
-export function Prep({
-  title = "Brew",
+export function PrepStage({
+  title = "Hario V60",
   coffeeG,
   waterG,
-  grind = "Medium",
-  temperatureC,
-  ratioLabel,
+  grind = "Medium-fine",
+  temperatureC = 94,
+  ratioLabel = "1:15",
   onStart,
   onClose,
 }: Props) {
   return (
     <div className={styles.root}>
       <header className={styles.header}>
-        <button className={styles.iconBtn} onClick={() => onClose?.()} aria-label="Luk">
+        <button className={styles.iconBtn} onClick={onClose}>
           ✕
         </button>
         <div className={styles.title}>{title}</div>
@@ -35,47 +35,28 @@ export function Prep({
 
       <main className={styles.main}>
         <div className={styles.hero}>
-          <div className={styles.kicker}>PREPARE</div>
-          <h1 className={styles.h1}>Klar til bryg?</h1>
-          <p className={styles.sub}>
-            Hold det simpelt: mål, temperatur, og en rolig hældning.
-          </p>
+          <div className={styles.kicker}>PREP</div>
+          <h1 className={styles.h1}>Gør klar</h1>
+          <p className={styles.sub}>Alt skal være klar før Bloom.</p>
         </div>
 
-        <section className={styles.cardGrid}>
+        <section className={styles.grid}>
           <div className={styles.card}>
-            <div className={styles.cardLabel}>COFFEE</div>
-            <div className={styles.cardValue}>{coffeeG} g</div>
-            <div className={styles.cardMeta}>{grind}</div>
+            <span>KAFFE</span>
+            <strong>{coffeeG} g</strong>
+            <em>{grind}</em>
           </div>
 
           <div className={styles.card}>
-            <div className={styles.cardLabel}>WATER</div>
-            <div className={styles.cardValue}>{waterG} g</div>
-            <div className={styles.cardMeta}>
-              {temperatureC != null ? `${temperatureC}°C` : "Varmt, ikke kogende"}
-            </div>
+            <span>VAND</span>
+            <strong>{waterG} g</strong>
+            <em>{temperatureC}°C</em>
           </div>
 
           <div className={styles.cardWide}>
-            <div className={styles.row}>
-              <div className={styles.pill}>
-                <span className={styles.pillKey}>Ratio</span>
-                <span className={styles.pillVal}>{ratioLabel ?? "—"}</span>
-              </div>
-              <div className={styles.pill}>
-                <span className={styles.pillKey}>Filter</span>
-                <span className={styles.pillVal}>Skyl + forvarm</span>
-              </div>
-              <div className={styles.pill}>
-                <span className={styles.pillKey}>Kande</span>
-                <span className={styles.pillVal}>Tara</span>
-              </div>
-            </div>
-
-            <div className={styles.tip}>
-              Tip: Start roligt. Du vinder mere på stabilitet end “hurtighed”.
-            </div>
+            <div className={styles.pill}>Ratio {ratioLabel}</div>
+            <div className={styles.pill}>Skyl filter</div>
+            <div className={styles.pill}>Tara vægt</div>
           </div>
         </section>
       </main>
@@ -84,7 +65,6 @@ export function Prep({
         <button className={styles.primary} onClick={onStart}>
           Start bryg
         </button>
-        <div className={styles.footerHint}>Tryk for at gå direkte til Bloom.</div>
       </footer>
     </div>
   );
