@@ -2,9 +2,11 @@
 import Link from "next/link";
 import styles from "./GlobalHeader.module.css";
 import { ThemeToggle } from "../ThemeToggle/ThemeToggle";
+import BarCountBadge from "../BarCountBadge/BarCountBadge";
 
 export function GlobalHeader({ variant = "marketing" }: { variant?: "marketing" | "app" }) {
   const isMarketing = variant === "marketing";
+
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
@@ -26,7 +28,12 @@ export function GlobalHeader({ variant = "marketing" }: { variant?: "marketing" 
             <>
               <Link className={styles.link} href="/scan">Scan</Link>
               <Link className={styles.link} href="/brew">Bryg</Link>
-              <Link className={styles.link} href="/bar">Min Bar</Link>
+
+              {/* 👇 HER */}
+              <Link className={styles.link} href="/bar">
+                Min Bar <BarCountBadge />
+              </Link>
+
               <Link className={styles.link} href="/profile">Profil</Link>
             </>
           )}
