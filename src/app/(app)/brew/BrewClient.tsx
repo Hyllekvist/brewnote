@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./BrewClient.module.css";
 
 type Step = {
@@ -17,61 +18,25 @@ function formatMMSS(total: number) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-export default function BrewClient({
-  type,
-  slug,
-}: {
-  type: string;
-  slug: string;
-}) {
+export default function BrewClient({ type, slug }: { type: string; slug: string }) {
+  const router = useRouter();
+
   /* ---------- TITLE ---------- */
 
   const title = useMemo(() => {
-    const name = slug
-      ? decodeURIComponent(slug).replace(/-/g, " ")
-      : "Brew Mode";
-    return type === "tea"
-      ? `Tea Brew — ${name}`
-      : `Coffee Brew — ${name}`;
+    const name = slug ? decodeURIComponent(slug).replace(/-/g, " ") : "Brew Mode";
+    return type === "tea" ? `Tea Brew — ${name}` : `Coffee Brew — ${name}`;
   }, [type, slug]);
 
   /* ---------- STEPS (v2 hardcoded) ---------- */
 
   const steps: Step[] = useMemo(
     () => [
-      {
-        id: "prep",
-        label: "Prep",
-        instruction: "Skyl filter og varm kop/server. Nulstil vægten.",
-        seconds: 20,
-      },
-      {
-        id: "bloom",
-        label: "Bloom",
-        instruction: "Hæld jævnt til alle grunde er mættede.",
-        targetG: 50,
-        seconds: 35,
-      },
-      {
-        id: "pour1",
-        label: "Pour 1",
-        instruction: "Hæld stabilt i cirkler. Roligt flow.",
-        targetG: 150,
-        seconds: 40,
-      },
-      {
-        id: "pour2",
-        label: "Pour 2",
-        instruction: "Top op til slutvægt. Stop og lad dræne.",
-        targetG: 300,
-        seconds: 55,
-      },
-      {
-        id: "finish",
-        label: "Finish",
-        instruction: "Swirl let. Smag og log resultat.",
-        seconds: 25,
-      },
+      { id: "prep", label: "Prep", instruction: "Skyl filter og varm kop/server. Nulstil vægten.", seconds: 20 },
+      { id: "bloom", label: "Bloom", instruction: "Hæld jævnt til alle grunde er mættede.", targetG: 50, seconds: 35 },
+      { id: "pour1", label: "Pour 1", instruction: "Hæld stabilt i cirkler. Roligt flow.", targetG: 150, seconds: 40 },
+      { id: "pour2", label: "Pour 2", instruction: "Top op til slutvægt. Stop og lad dræne.", targetG: 300, seconds: 55 },
+      { id: "finish", label: "Finish", instruction: "Swirl let. Smag og log resultat.", seconds: 25 },
     ],
     []
   );
@@ -91,6 +56,7 @@ export default function BrewClient({
   const [stepElapsed, setStepElapsed] = useState(0); // step sek
 
   const current = steps[idx];
+  const isLast = idx === steps.length - 1;
 
   /* ---------- TIMER ---------- */
 
@@ -108,34 +74,40 @@ export default function BrewClient({
   /* ---------- AUTO ADVANCE ---------- */
 
   useEffect(() => {
-  const limit = current.seconds || 0;
-  if (!running || !limit) return;
-  if (stepElapsed < limit) return;
+    const limit = current.seconds || 0;
+    if (!running || !limit) return;
+    if (stepElapsed < limit) return;
 
-  try {
-    navigator.vibrate?.([40, 40, 40]);
-  } catch {}
+    // vibrate hvis mobil
+    try {
+      navigator.vibrate?.([40, 40, 40]);
+    } catch {}
 
-  // ✅ sidste step: gå til review
-  if (idx >= steps.length - 1) {
-    setRunning(false);
+    // sidste step: stop og send til review
+    if (isLast) {
+      setRunning(false);
 
-    const qs = new URLSearchParams({
-      type,
-      slug,
-      seconds: String(elapsed),
-      method: "Pour-over",
-    });
+      const qs = new URLSearchParams({
+        type,
+        slug,
+        seconds: String(elapsed),
+        method: "Pour-over",
+      });
 
-    window.location.href = `/brew/review?${qs.toString()}`;
-    return;
-  }
+      router.push(`/brew/review?${qs.toString()}`);
+      return;
+    }
 
-  // ellers: næste step
-  setRunning(false);
-  setIdx((p) => p + 1);
-  setStepElapsed(0);
-}, [stepElapsed, running, current.seconds, idx, steps.length, elapsed, slug, type]);
+    // ellers: næste step (behold running=true så flow fortsætter)
+    setIdx((p) => Math.min(steps.length - 1, p + 1));
+    setStepElapsed(0);
+  }, [stepElapsed, running, current.seconds, isLast, elapsed, slug, type, router, steps.length]);
+
+  /* ---------- når idx ændres manuelt ---------- */
+  useEffect(() => {
+    setStepElapsed(0);
+  }, [idx]);
+
   /* ---------- MANUAL NAV ---------- */
 
   const goPrev = () => {
@@ -148,22 +120,13 @@ export default function BrewClient({
     setIdx((p) => Math.min(steps.length - 1, p + 1));
   };
 
-  useEffect(() => {
-    setStepElapsed(0);
-  }, [idx]);
-
   /* ---------- PROGRESS ---------- */
 
   const stepSeconds = current.seconds || 0;
-  const stepProgress = stepSeconds
-    ? Math.min(1, stepElapsed / stepSeconds)
-    : 0.12;
-
+  const stepProgress = stepSeconds ? Math.min(1, stepElapsed / stepSeconds) : 0.12;
   const progressDeg = Math.round(stepProgress * 360);
 
-  const primaryValue = current.targetG
-    ? `${current.targetG}g`
-    : "—";
+  const primaryValue = current.targetG ? `${current.targetG}g` : isLast ? "Done" : "—";
 
   /* ---------- COMMAND TEXT ---------- */
 
@@ -173,6 +136,25 @@ export default function BrewClient({
     if (current.targetG) return `Pour til ${current.targetG}g.`;
     return current.instruction;
   }, [current]);
+
+  /* ---------- PRIMARY BUTTON ---------- */
+
+  const primaryLabel = isLast && !running ? "Review" : running ? "Pause" : "Start";
+
+  const onPrimary = () => {
+    // sidste step + ikke kørende = gå til review direkte
+    if (isLast && !running) {
+      const qs = new URLSearchParams({
+        type,
+        slug,
+        seconds: String(elapsed),
+        method: "Pour-over",
+      });
+      router.push(`/brew/review?${qs.toString()}`);
+      return;
+    }
+    setRunning((v) => !v);
+  };
 
   /* ---------- RENDER ---------- */
 
@@ -195,11 +177,7 @@ export default function BrewClient({
           </div>
         </div>
 
-        <button
-          className={styles.iconBtn}
-          onClick={() => history.back()}
-          aria-label="Luk"
-        >
+        <button className={styles.iconBtn} onClick={() => history.back()} aria-label="Luk">
           ✕
         </button>
       </header>
@@ -209,17 +187,12 @@ export default function BrewClient({
         <div className={styles.timerRow}>
           <div className={styles.timer}>{formatMMSS(elapsed)}</div>
 
-          <button
-            className={styles.stepPill}
-            onClick={() => setSheetOpen((v) => !v)}
-          >
+          <button className={styles.stepPill} onClick={() => setSheetOpen((v) => !v)} aria-expanded={sheetOpen}>
             <span className={styles.pillIdx}>
               {idx + 1}/{steps.length}
             </span>
             <span className={styles.pillLabel}>{current.label}</span>
-            <span className={styles.pillChevron}>
-              {sheetOpen ? "▾" : "▴"}
-            </span>
+            <span className={styles.pillChevron}>{sheetOpen ? "▾" : "▴"}</span>
           </button>
         </div>
 
@@ -239,32 +212,19 @@ export default function BrewClient({
         <p className={styles.instruction}>
           <strong>{actionLine}</strong>
           <br />
-          <span className={styles.subInstruction}>
-            {current.instruction}
-          </span>
+          <span className={styles.subInstruction}>{current.instruction}</span>
         </p>
 
         <div className={styles.controls}>
-          <button
-            className={styles.btn}
-            onClick={goPrev}
-            disabled={idx === 0}
-          >
+          <button className={styles.btn} onClick={goPrev} disabled={idx === 0}>
             ←
           </button>
 
-          <button
-            className={`${styles.btn} ${styles.btnPrimary}`}
-            onClick={() => setRunning((v) => !v)}
-          >
-            {running ? "Pause" : "Start"}
+          <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={onPrimary}>
+            {primaryLabel}
           </button>
 
-          <button
-            className={styles.btn}
-            onClick={goNext}
-            disabled={idx === steps.length - 1}
-          >
+          <button className={styles.btn} onClick={goNext} disabled={isLast}>
             →
           </button>
         </div>
@@ -272,13 +232,7 @@ export default function BrewClient({
         <div className={styles.microRow}>
           <span>
             Step tilbage:{" "}
-            <strong>
-              {stepSeconds
-                ? formatMMSS(
-                    Math.max(0, stepSeconds - stepElapsed)
-                  )
-                : "—"}
-            </strong>
+            <strong>{stepSeconds ? formatMMSS(Math.max(0, stepSeconds - stepElapsed)) : "—"}</strong>
           </span>
           <span>
             Total: <strong>{formatMMSS(totalSeconds)}</strong>
@@ -287,23 +241,14 @@ export default function BrewClient({
       </section>
 
       {/* BOTTOM SHEET */}
-      <section
-        className={`${styles.sheet} ${
-          sheetOpen ? styles.sheetOpen : ""
-        }`}
-      >
-        <div
-          className={styles.sheetHandle}
-          onClick={() => setSheetOpen((v) => !v)}
-        />
+      <section className={`${styles.sheet} ${sheetOpen ? styles.sheetOpen : ""}`}>
+        <div className={styles.sheetHandle} onClick={() => setSheetOpen((v) => !v)} />
 
         <div className={styles.stepList}>
           {steps.map((s, i) => (
             <button
               key={s.id}
-              className={`${styles.stepRow} ${
-                i === idx ? styles.stepRowActive : ""
-              }`}
+              className={`${styles.stepRow} ${i === idx ? styles.stepRowActive : ""}`}
               onClick={() => {
                 setRunning(false);
                 setIdx(i);
@@ -315,8 +260,7 @@ export default function BrewClient({
                 <div>
                   <div className={styles.rowTitle}>{s.label}</div>
                   <div className={styles.rowSub}>
-                    {s.targetG ? `${s.targetG}g` : "—"} ·{" "}
-                    {s.seconds ? `${s.seconds}s` : "—"}
+                    {s.targetG ? `${s.targetG}g` : "—"} · {s.seconds ? `${s.seconds}s` : "—"}
                   </div>
                 </div>
               </div>
