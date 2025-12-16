@@ -1,6 +1,6 @@
-"use client"; 
+"use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "./ProductScreen.module.css";
 
 type BrewDNA = { acid: number; body: number; sweet: number };
@@ -8,7 +8,7 @@ type TasteNote = { label: string; count: number };
 type BrewVariation = { id: string; method: string; description: string; time: string };
 
 type Props = {
-  slug: string; // ✅ NY: bruges til inventory
+  slug: string; // ✅ bruges til inventory + feedback
   name: string;
   meta: string;
 
@@ -43,6 +43,10 @@ function getUserKey() {
   return newKey;
 }
 
+function clamp01(x: number) {
+  return Math.max(0, Math.min(1, x));
+}
+
 export default function ProductScreen({
   slug,
   name,
@@ -54,26 +58,30 @@ export default function ProductScreen({
   variations,
 }: Props) {
   const [tab, setTab] = useState<Tab>("overview");
+
+  // preference state (like/dislike)
   const [preference, setPreference] = useState<"like" | "dislike" | null>(null);
+  const [prefSaving, setPrefSaving] = useState(false);
+  const [prefError, setPrefError] = useState<string | null>(null);
 
   // Inventory CTA state
   const [isAdding, setIsAdding] = useState(false);
   const [added, setAdded] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [checkingAdded, setCheckingAdded] = useState(true);
 
   // Stub-data (skiftes til Supabase senere)
   const rating = useMemo(() => ({ score: 4.3, count: 5072 }), []);
   const match = useMemo(() => 52, []);
 
   const dnaBg = useMemo(() => {
-    const bodyDeg = Math.max(0, Math.min(1, dna.body)) * 360;
-    const acidDeg = Math.max(0, Math.min(1, dna.acid)) * 360;
-    const sweetDeg = Math.max(0, Math.min(1, dna.sweet)) * 360;
+    const bodyDeg = clamp01(dna.body) * 360;
+    const acidDeg = clamp01(dna.acid) * 360;
+    const sweetDeg = clamp01(dna.sweet) * 360;
 
     const sum = bodyDeg + acidDeg + sweetDeg || 360;
     const b = (bodyDeg / sum) * 360;
     const a = (acidDeg / sum) * 360;
-    const s = 360 - b - a;
 
     return `conic-gradient(
       var(--accent2) 0deg ${b}deg,
@@ -81,6 +89,88 @@ export default function ProductScreen({
       rgba(255,255,255,.14) ${b + a}deg 360deg
     )`;
   }, [dna]);
+
+  // -------- Supabase REST helpers (no supabase-js) --------
+
+  function supaEnv() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !anon) throw new Error("Missing Supabase env vars");
+    return { url, anon };
+  }
+
+  async function sbFetch(path: string, init: RequestInit, userKey?: string) {
+    const { url, anon } = supaEnv();
+    const headers = new Headers(init.headers);
+
+    headers.set("apikey", anon);
+    headers.set("Authorization", `Bearer ${anon}`);
+    headers.set("Content-Type", "application/json");
+    if (userKey) headers.set("x-user-key", userKey); // ✅ matcher RLS policies
+
+    const res = await fetch(`${url}${path}`, { ...init, headers, cache: "no-store" });
+    const text = await res.text();
+    if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
+    return text ? JSON.parse(text) : null;
+  }
+
+  // -------- On mount: check if already in inventory + load preference --------
+
+  useEffect(() => {
+    let alive = true;
+
+    async function boot() {
+      const user_key = getUserKey();
+
+      // 1) Check "added" (inventory exists?)
+      setCheckingAdded(true);
+      setAddError(null);
+
+      try {
+        const data = await sbFetch(
+          `/rest/v1/inventory?select=id&user_key=eq.${encodeURIComponent(
+            user_key
+          )}&product_slug=eq.${encodeURIComponent(slug)}&limit=1`,
+          { method: "GET" },
+          user_key
+        );
+
+        if (!alive) return;
+        setAdded(Array.isArray(data) && data.length > 0);
+      } catch (e: any) {
+        if (!alive) return;
+        // ikke fatal – men vis ikke rød fejl med det samme
+        setAddError(null);
+      } finally {
+        if (alive) setCheckingAdded(false);
+      }
+
+      // 2) Load preference (if exists)
+      setPrefError(null);
+      try {
+        const data = await sbFetch(
+          `/rest/v1/product_feedback?select=preference&user_key=eq.${encodeURIComponent(
+            user_key
+          )}&product_slug=eq.${encodeURIComponent(slug)}&limit=1`,
+          { method: "GET" },
+          user_key
+        );
+
+        if (!alive) return;
+        const p = Array.isArray(data) && data[0]?.preference;
+        if (p === "like" || p === "dislike") setPreference(p);
+      } catch (e: any) {
+        // ignore (non fatal)
+      }
+    }
+
+    boot();
+    return () => {
+      alive = false;
+    };
+  }, [slug]);
+
+  // -------- Actions --------
 
   async function handleAddToBar() {
     if (isAdding || added) return;
@@ -100,7 +190,6 @@ export default function ProductScreen({
       const json = await res.json();
 
       if (!res.ok || !json.ok) {
-        // json.body er text fra supabase rest
         throw new Error(json?.body || `HTTP ${res.status}`);
       }
 
@@ -112,6 +201,45 @@ export default function ProductScreen({
     }
   }
 
+  async function savePreference(next: "like" | "dislike" | null) {
+    setPreference(next);
+    setPrefError(null);
+
+    // (vi implementerer “slet preference” senere; nu gemmer vi kun hvis valgt)
+    if (!next) return;
+
+    setPrefSaving(true);
+
+    try {
+      const user_key = getUserKey();
+
+      // upsert
+      await sbFetch(
+        `/rest/v1/product_feedback?on_conflict=user_key,product_slug`,
+        {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+          body: JSON.stringify([
+            { user_key, product_slug: slug, preference: next },
+          ]),
+        },
+        user_key
+      );
+    } catch (e: any) {
+      setPrefError(e?.message || "Kunne ikke gemme preference");
+    } finally {
+      setPrefSaving(false);
+    }
+  }
+
+  const addBtnLabel = added
+    ? "Tilføjet ✓"
+    : checkingAdded
+    ? "Tjekker…"
+    : isAdding
+    ? "Tilføjer…"
+    : "Tilføj til Bar";
+
   return (
     <main className={styles.page}>
       {/* HERO */}
@@ -121,7 +249,7 @@ export default function ProductScreen({
           <div className={styles.meta}>{meta}</div>
           <h1 className={styles.title}>{name}</h1>
 
-          {/* Rating + Match (Vivino-feel) */}
+          {/* Rating + Match */}
           <div className={styles.heroStats}>
             <div className={styles.ratingBlock}>
               <div className={styles.ratingScore}>
@@ -142,11 +270,13 @@ export default function ProductScreen({
                 <span>Match for dig</span>
               </div>
 
+              {/* Like/Dislike */}
               <div className={styles.matchActions}>
                 <button
                   type="button"
                   className={preference === "like" ? styles.active : ""}
-                  onClick={() => setPreference(preference === "like" ? null : "like")}
+                  onClick={() => savePreference(preference === "like" ? null : "like")}
+                  disabled={prefSaving}
                 >
                   Jeg kan godt lide
                 </button>
@@ -154,27 +284,28 @@ export default function ProductScreen({
                   type="button"
                   className={preference === "dislike" ? styles.active : ""}
                   onClick={() =>
-                    setPreference(preference === "dislike" ? null : "dislike")
+                    savePreference(preference === "dislike" ? null : "dislike")
                   }
+                  disabled={prefSaving}
                 >
                   Jeg kan ikke lide
                 </button>
               </div>
 
-              {/* ✅ Add to Bar (ny) */}
+              {prefError ? <div className={styles.errorText}>{prefError}</div> : null}
+
+              {/* Add to Bar */}
               <div className={styles.barActions}>
                 <button
                   type="button"
                   className={styles.addToBar}
                   onClick={handleAddToBar}
-                  disabled={isAdding || added}
+                  disabled={checkingAdded || isAdding || added}
                 >
-                  {added ? "Tilføjet ✓" : isAdding ? "Tilføjer..." : "Tilføj til Bar"}
+                  {addBtnLabel}
                 </button>
 
-                {addError ? (
-                  <div className={styles.errorText}>{addError}</div>
-                ) : null}
+                {addError ? <div className={styles.errorText}>{addError}</div> : null}
               </div>
             </div>
           </div>
@@ -342,8 +473,8 @@ export default function ProductScreen({
           <div className={styles.learnCard}>
             <h3>Hvad betyder Brew DNA?</h3>
             <p>
-              Brew DNA er en fællesskabsprofil over hvordan kaffen typisk opleves – så du
-              kan vælge smartere.
+              Brew DNA er en fællesskabsprofil over hvordan kaffen typisk opleves – så
+              du kan vælge smartere.
             </p>
             <button className={styles.primaryMini} type="button">
               Åbn guide
@@ -360,7 +491,7 @@ export default function ProductScreen({
         </section>
       )}
 
-      {/* Sticky CTA (safe-area fixed) */}
+      {/* Sticky CTA */}
       <footer className={styles.stickyBar}>
         <div className={styles.stickyInner}>
           <div className={styles.stickyLeft}>
