@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 
+type Extracted = {
+  brand?: string;
+  line?: string;
+  name?: string;
+  size_g?: number;
+  form?: "beans" | "ground";
+};
+
 type ProductRow = { id: string; brand: string; line: string | null; name: string };
 type VariantRow = {
   id: string;
@@ -11,6 +19,22 @@ type VariantRow = {
   organic: boolean | null;
   products: ProductRow | ProductRow[] | null;
 };
+
+function fingerprintFromExtracted(ex: Extracted) {
+  const norm = (s?: string) =>
+    (s ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+
+  return [
+    `b:${norm(ex.brand)}`,
+    `l:${norm(ex.line)}`,
+    `n:${norm(ex.name)}`,
+    `s:${ex.size_g ?? ""}`,
+    `f:${norm(ex.form)}`,
+  ].join("|");
+}
 
 export async function POST(req: Request) {
   const { sessionId, variantId } = await req.json();
@@ -24,6 +48,21 @@ export async function POST(req: Request) {
 
   const supabase = supabaseServer();
 
+  // 1) hent session (for extracted -> fingerprint)
+  const { data: sess, error: sErr } = await supabase
+    .from("scan_sessions")
+    .select("id, extracted")
+    .eq("id", sessionId)
+    .single();
+
+  if (sErr || !sess) {
+    return NextResponse.json({ error: "Unknown session" }, { status: 404 });
+  }
+
+  const extracted = (sess.extracted ?? {}) as Extracted;
+  const fp = fingerprintFromExtracted(extracted);
+
+  // 2) hent variant + product (til UI)
   const { data, error: vErr } = await supabase
     .from("product_variants")
     .select(
@@ -37,9 +76,7 @@ export async function POST(req: Request) {
   }
 
   const v = data as VariantRow;
-
-  const p =
-    Array.isArray(v.products) ? v.products[0] : v.products;
+  const p = Array.isArray(v.products) ? v.products[0] : v.products;
 
   if (!p) {
     return NextResponse.json({ error: "Variant missing product" }, { status: 400 });
@@ -58,6 +95,7 @@ export async function POST(req: Request) {
     organic: v.organic,
   };
 
+  // 3) opdater session til resolved
   const { error: upErr } = await supabase
     .from("scan_sessions")
     .update({
@@ -69,6 +107,14 @@ export async function POST(req: Request) {
 
   if (upErr) {
     return NextResponse.json({ error: upErr.message }, { status: 400 });
+  }
+
+  // 4) LÆRING: upsert fingerprint -> variant (kun hvis vi faktisk har data at fingerprinte)
+  if (fp.includes("b:") && fp.includes("n:") && fp !== "b:|l:|n:|s:|f:") {
+    await supabase.from("scan_fingerprints").upsert(
+      { fingerprint: fp, variant_id: variantId },
+      { onConflict: "fingerprint" }
+    );
   }
 
   return NextResponse.json({
