@@ -1,6 +1,6 @@
-import { GlobalHeader } from "@/app/components/GlobalHeader";
+import { GlobalHeader } from "@/components/GlobalHeader/GlobalHeader";
 import BarClient from "./BarClient";
-import styles from "./BarPage.module.css"; 
+import styles from "./bar.module.css";
 
 export const dynamic = "force-dynamic";
 
