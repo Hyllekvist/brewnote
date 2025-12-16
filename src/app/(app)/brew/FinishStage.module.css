@@ -1,28 +1,54 @@
 .root {
   min-height: 100vh;
-  padding: 24px;
+  padding: 88px 24px 28px; /* plads til global header */
   background: var(--bg);
   color: var(--ink);
+
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 24px;
+  gap: 18px;
   text-align: center;
+
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+@media (max-width: 640px) {
+  .root {
+    padding: 76px 16px 22px;
+  }
 }
 
 .h2 {
-  font-size: 24px;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  margin: 0;
 }
 
 .sub {
-  opacity: 0.6;
+  opacity: 0.65;
+  margin: 0 auto;
+  max-width: 520px;
+  line-height: 1.5;
 }
 
+/* CTA */
 .primary {
-  height: 56px;
+  margin: 18px auto 0;
+  width: min(680px, 100%);
+  height: 58px;
   border-radius: 14px;
+
   background: var(--accent);
-  color: #000;
+  color: #0a0a0a;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.primary:active {
+  transform: translateY(1px);
 }
