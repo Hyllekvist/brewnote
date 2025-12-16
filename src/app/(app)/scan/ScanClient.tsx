@@ -98,6 +98,7 @@ export default function ScanClient() {
     intensity: undefined,
     arabica_pct: undefined,
     organic: undefined,
+    ean: "",
   });
 
   function loadEditFromResult(r: ProcessResult) {
@@ -111,7 +112,7 @@ export default function ScanClient() {
       intensity: ex.intensity,
       arabica_pct: ex.arabica_pct,
       organic: ex.organic,
-      ean: ex.ean,
+      ean: ex.ean ?? "",
     });
   }
 
@@ -307,6 +308,14 @@ export default function ScanClient() {
     setBusy(true);
 
     try {
+      // ✅ A: kræv login før inventory
+      const { data: auth } = await supabase.auth.getUser();
+      const user = auth?.user;
+
+      if (!user) {
+        throw new Error("Du skal være logget ind for at gemme i inventory.");
+      }
+
       const res = await fetch("/api/inventory/add", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -315,6 +324,10 @@ export default function ScanClient() {
 
       const text = await res.text();
       const j = safeJson(text);
+
+      if (res.status === 401) {
+        throw new Error("Du skal være logget ind for at gemme i inventory.");
+      }
 
       if (!res.ok) throw new Error(`inventory ${res.status}: ${j?.error ?? text}`);
       setSavedMsg("Gemt i inventory ✅");
@@ -348,9 +361,7 @@ export default function ScanClient() {
         </p>
       )}
 
-      {savedMsg && (
-        <p style={{ marginTop: 12, color: "limegreen" }}>{savedMsg}</p>
-      )}
+      {savedMsg && <p style={{ marginTop: 12, color: "limegreen" }}>{savedMsg}</p>}
 
       {result && (
         <div
@@ -391,9 +402,7 @@ export default function ScanClient() {
                 <div>
                   <div style={{ fontSize: 12, opacity: 0.75 }}>Origin</div>
                   <div style={{ opacity: 0.95 }}>
-                    {detail.origin
-                      ? JSON.stringify(detail.origin)
-                      : "— (ingen origin endnu)"}
+                    {detail.origin ? JSON.stringify(detail.origin) : "— (ingen origin endnu)"}
                   </div>
                 </div>
 
