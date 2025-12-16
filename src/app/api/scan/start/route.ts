@@ -3,38 +3,25 @@ import { supabaseServer } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   const { fileName } = await req.json();
-const supabase = supabaseServer();
 
-  // 1. kræv login
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+  const supabase = supabaseServer();
 
-  if (error || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // 2. opret scan-session
   const sessionId = crypto.randomUUID();
   const safeName = sanitize(fileName);
-  const uploadPath = `${user.id}/${sessionId}-${safeName}`;
+  const uploadPath = `public/${sessionId}-${safeName}`;
 
-  const { error: insertError } = await supabase
+  const { error } = await supabase
     .from("scan_sessions")
     .insert({
       id: sessionId,
-      user_id: user.id,
+      user_id: null,
       image_path: uploadPath,
       extracted: {},
-      status: "pending",
+      status: "pending"
     });
 
-  if (insertError) {
-    return NextResponse.json(
-      { error: insertError.message },
-      { status: 400 }
-    );
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
   return NextResponse.json({ sessionId, uploadPath });
