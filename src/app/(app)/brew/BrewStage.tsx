@@ -7,11 +7,11 @@ export type BrewPhase = "bloom" | "pour" | "finish";
 
 export type BrewStep = {
   id: string;
-  label: string;          // "Bloom", "Pour 1", "Finish"
-  instruction: string;    // kort tekst
-  seconds?: number;       // hvis step er tidsbaseret
-  targetG?: number;       // hvis step har mål
-  phase: BrewPhase;       // 👈 styrer ringens semantik
+  label: string; // "Bloom", "Pour 1", "Finish"
+  instruction: string; // kort tekst
+  seconds?: number; // hvis step er tidsbaseret
+  targetG?: number; // hvis step har mål
+  phase: BrewPhase; // 👈 styrer ringens semantik
 };
 
 type Props = {
@@ -20,10 +20,9 @@ type Props = {
   elapsedSeconds: number;
   isRunning: boolean;
 
-  // handlers (du flytter din nuværende logik ind her)
-  onTick: () => void;                 // +1 sekund
-  onAutoAdvanceIfNeeded: () => void;  // skift step når tid nås
-  onFinish: () => void;               // når sidste step er done
+  onTick: () => void; // +1 sekund
+  onAutoAdvanceIfNeeded: () => void; // skift step når tid nås
+  onFinish: () => void; // når sidste step er done
 
   // optional gesture: tap-to-skip (ikke knap)
   onTap?: () => void;
@@ -56,6 +55,15 @@ export function BrewStage({
     return Math.max(0, step.seconds - inStep);
   }, [steps, activeIndex, elapsedSeconds, step]);
 
+  const stepProgress = useMemo(() => {
+    if (!step?.seconds) return 0;
+    const stepStart = steps
+      .slice(0, activeIndex)
+      .reduce((acc, s) => acc + (s.seconds ?? 0), 0);
+    const inStep = elapsedSeconds - stepStart;
+    return Math.min(1, Math.max(0, inStep / step.seconds));
+  }, [steps, activeIndex, elapsedSeconds, step]);
+
   // tick
   useEffect(() => {
     if (!isRunning) return;
@@ -79,6 +87,9 @@ export function BrewStage({
 
   if (!step) return null;
 
+  const centerText =
+    stepRemaining != null ? formatMMSS(stepRemaining) : formatMMSS(elapsedSeconds);
+
   return (
     <section
       className={styles.root}
@@ -92,11 +103,7 @@ export function BrewStage({
       </header>
 
       <div className={styles.ringWrap}>
-        <BrewRing
-          phase={step.phase}
-          secondsRemaining={stepRemaining ?? undefined}
-          centerText={stepRemaining != null ? formatMMSS(stepRemaining) : formatMMSS(elapsedSeconds)}
-        />
+        <BrewRing phase={step.phase} progress={stepProgress} centerText={centerText} />
       </div>
 
       <div className={styles.meta}>
@@ -110,29 +117,35 @@ export function BrewStage({
         </div>
       </div>
 
-      <p className={styles.hint}>
-        {onTap ? "Tap for at springe til næste step." : ""}
-      </p>
+      <p className={styles.hint}>{onTap ? "Tap for at springe til næste step." : ""}</p>
     </section>
   );
 }
 
 function BrewRing({
   phase,
-  secondsRemaining,
+  progress,
   centerText,
 }: {
   phase: BrewPhase;
-  secondsRemaining?: number;
+  progress: number; // 0 → 1
   centerText: string;
 }) {
-  // Render: simpelt skelet. Du kan senere lave SVG ring.
+  const deg = Math.round(progress * 360);
+
   return (
-    <div className={`${styles.ring} ${styles[`phase_${phase}`]}`}>
-      <div className={styles.center}>{centerText}</div>
-      {typeof secondsRemaining === "number" && (
-        <div className={styles.sub}>remaining</div>
-      )}
+    <div
+      className={`${styles.ring} ${styles[`phase_${phase}`]}`}
+      style={{
+        background: `conic-gradient(
+          var(--ringActive) 0deg ${deg}deg,
+          rgba(255,255,255,0.10) ${deg}deg 360deg
+        )`,
+      }}
+    >
+      <div className={styles.ringInner}>
+        <div className={styles.center}>{centerText}</div>
+      </div>
     </div>
   );
 }
