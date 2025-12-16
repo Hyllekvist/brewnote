@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "./BrewClient.module.css";
 
 type Step = {
@@ -11,12 +11,11 @@ type Step = {
   seconds?: number;
 };
 
-type SetupCard = {
+type Slide = {
   id: string;
   title: string;
   body: string;
-  meta?: string;
-  icon: "gear" | "kettle" | "scale" | "dripper" | "coffee";
+  icon: "tools" | "dripper" | "coffee" | "kettle";
 };
 
 function formatMMSS(total: number) {
@@ -25,129 +24,135 @@ function formatMMSS(total: number) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-function Icon({ name }: { name: SetupCard["icon"] }) {
-  // simple inline SVGs (no assets)
-  if (name === "kettle")
+function SlideIcon({ kind }: { kind: Slide["icon"] }) {
+  // Simple inline icons (kan skiftes senere)
+  if (kind === "tools") {
     return (
-      <svg viewBox="0 0 64 64" className={styles.bigIcon} aria-hidden="true">
+      <svg width="84" height="84" viewBox="0 0 24 24" aria-hidden="true">
         <path
-          d="M14 44c0 8 6 14 14 14h10c8 0 14-6 14-14V30c0-6-4-10-10-10H30c-6 0-10 4-10 10v14Z"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="3"
-        />
-        <path
-          d="M44 22c4 0 8 3 8 7v6"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-        <path
-          d="M22 18c2-4 6-8 12-8"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="3"
-          strokeLinecap="round"
+          fill="currentColor"
+          d="M14 3h-4v2H8a2 2 0 0 0-2 2v2h12V7a2 2 0 0 0-2-2h-2V3Zm6 8H4v2h16v-2Zm-3 4H7v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-6Z"
         />
       </svg>
     );
-
-  if (name === "scale")
+  }
+  if (kind === "dripper") {
     return (
-      <svg viewBox="0 0 64 64" className={styles.bigIcon} aria-hidden="true">
-        <rect x="12" y="20" width="40" height="32" rx="10" fill="none" stroke="currentColor" strokeWidth="3" />
-        <rect x="22" y="28" width="20" height="10" rx="4" fill="none" stroke="currentColor" strokeWidth="3" />
-        <circle cx="20" cy="46" r="2" fill="currentColor" />
-        <circle cx="26" cy="46" r="2" fill="currentColor" />
-      </svg>
-    );
-
-  if (name === "dripper")
-    return (
-      <svg viewBox="0 0 64 64" className={styles.bigIcon} aria-hidden="true">
+      <svg width="84" height="84" viewBox="0 0 24 24" aria-hidden="true">
         <path
-          d="M18 18h28l-6 16c-2 6-6 10-8 10s-6-4-8-10l-6-16Z"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="3"
-          strokeLinejoin="round"
+          fill="currentColor"
+          d="M7 3h10l-1 7h-1v2a4 4 0 0 1-8 0V10H8L7 3Zm2.2 2 0.6 4h4.4l0.6-4H9.2ZM9 12v0.3a3 3 0 0 0 6 0V12H9Z"
         />
-        <path d="M22 46h20" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-        <path d="M28 46v10h8V46" fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" />
       </svg>
     );
-
-  if (name === "coffee")
+  }
+  if (kind === "coffee") {
     return (
-      <svg viewBox="0 0 64 64" className={styles.bigIcon} aria-hidden="true">
-        <path d="M18 26h28v12c0 8-6 14-14 14s-14-6-14-14V26Z" fill="none" stroke="currentColor" strokeWidth="3" />
-        <path d="M46 28h3c5 0 9 4 9 9s-4 9-9 9h-3" fill="none" stroke="currentColor" strokeWidth="3" />
-        <path d="M20 56h24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      <svg width="84" height="84" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          fill="currentColor"
+          d="M6 2h12v2H6V2Zm1 4h10l-1 14H8L7 6Zm3 3v8h2V9h-2Zm4 0v8h2V9h-2Z"
+        />
       </svg>
     );
-
-  // gear
+  }
+  // kettle
   return (
-    <svg viewBox="0 0 64 64" className={styles.bigIcon} aria-hidden="true">
+    <svg width="84" height="84" viewBox="0 0 24 24" aria-hidden="true">
       <path
-        d="M28 8h8l2 6 6 2 6-2 4 8-5 4v8l5 4-4 8-6-2-6 2-2 6h-8l-2-6-6-2-6 2-4-8 5-4v-8l-5-4 4-8 6 2 6-2 2-6Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinejoin="round"
+        fill="currentColor"
+        d="M9 3h6v2h-1v2.1a6.5 6.5 0 0 1 4 5.9v2a6 6 0 0 1-6 6H10a6 6 0 0 1-6-6v-2a6.5 6.5 0 0 1 4-5.9V5H9V3Zm3 6a5 5 0 0 0-5 5v2a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4v-2a5 5 0 0 0-5-5Zm7-1h2v3h-2V8Z"
       />
-      <circle cx="32" cy="32" r="7" fill="none" stroke="currentColor" strokeWidth="3" />
     </svg>
   );
 }
 
 export default function BrewClient({ type, slug }: { type: string; slug: string }) {
-  /* ---------- TITLE ---------- */
   const title = useMemo(() => {
     const name = slug ? decodeURIComponent(slug).replace(/-/g, " ") : "Brew Mode";
     return type === "tea" ? `Tea Brew — ${name}` : `Coffee Brew — ${name}`;
   }, [type, slug]);
 
-  /* ---------- SETUP (over-fold wizard) ---------- */
-  const setupCards: SetupCard[] = useMemo(
+  /* ---------- PREP SLIDES (inspiration fra reference) ---------- */
+  const slides: Slide[] = useMemo(
     () => [
       {
-        id: "need",
-        icon: "gear",
+        id: "tools",
         title: "Det skal du bruge",
-        body: "Kværnet kaffe · varmt vand · filter · V60/dripper · kop/server · vægt · kedel",
-        meta: "Tip: kog lidt ekstra vand så koppen holder varmen.",
+        body: "Kværnet kaffe · varmt vand · filter · V60/dripper · kop/server · vægt · kedel.\nTip: kog lidt ekstra vand så koppen holder varmen.",
+        icon: "tools",
       },
-      { id: "kettle", icon: "kettle", title: "Kog vandet", body: "Sigt efter ca. 92–96°C (eller det du foretrækker).", meta: "Start når du er klar." },
-      { id: "scale", icon: "scale", title: "Kop på vægten", body: "Sæt kop/server på vægten. Tænd vægten (tare senere).", meta: "Hold opsætningen stabil." },
-      { id: "dripper", icon: "dripper", title: "Dripper + filter", body: "Sæt dripperen på. Skyl filteret og hæld skyllevandet ud.", meta: "Nu er du klar til brew." },
+      {
+        id: "dripper",
+        title: "Dripper + filter",
+        body: "Sæt dripperen på. Skyl filteret og hæld skyllevandet ud.\nNu er du klar til brew.",
+        icon: "dripper",
+      },
+      {
+        id: "coffee",
+        title: "Kaffe i filteret",
+        body: "Hæld kaffen i filteret. Ryst/tap let så bed’en bliver plan. Lav evt. en lille fordybning i midten.",
+        icon: "coffee",
+      },
+      {
+        id: "kettle",
+        title: "Klar med vand",
+        body: "Hav vandet klar (fx 92–96°C). Placér kop/server på vægten.\nNår du trykker Start Brew får du timer + step-guidance.",
+        icon: "kettle",
+      },
     ],
     []
   );
-
-  const [mode, setMode] = useState<"setup" | "brew">("setup");
-  const [setupIdx, setSetupIdx] = useState(0);
-
-  const setupNext = () => setSetupIdx((p) => Math.min(setupCards.length - 1, p + 1));
-  const setupPrev = () => setSetupIdx((p) => Math.max(0, p - 1));
-  const setupDone = () => setMode("brew");
 
   /* ---------- STEPS (v2 hardcoded) ---------- */
   const steps: Step[] = useMemo(
     () => [
-      { id: "prep", label: "Prep", instruction: "Skyl filter og varm kop/server. Nulstil vægten.", seconds: 20 },
-      { id: "bloom", label: "Bloom", instruction: "Hæld jævnt til alle grunde er mættede.", targetG: 50, seconds: 35 },
-      { id: "pour1", label: "Pour 1", instruction: "Hæld stabilt i cirkler. Roligt flow.", targetG: 150, seconds: 40 },
-      { id: "pour2", label: "Pour 2", instruction: "Top op til slutvægt. Stop og lad dræne.", targetG: 300, seconds: 55 },
-      { id: "finish", label: "Finish", instruction: "Swirl let. Smag og log resultat.", seconds: 25 },
+      {
+        id: "prep",
+        label: "Prep",
+        instruction: "Skyl filter og varm kop/server. Nulstil vægten.",
+        seconds: 20,
+      },
+      {
+        id: "bloom",
+        label: "Bloom",
+        instruction: "Hæld jævnt til alle grunde er mættede.",
+        targetG: 50,
+        seconds: 35,
+      },
+      {
+        id: "pour1",
+        label: "Pour 1",
+        instruction: "Hæld stabilt i cirkler. Roligt flow.",
+        targetG: 150,
+        seconds: 40,
+      },
+      {
+        id: "pour2",
+        label: "Pour 2",
+        instruction: "Top op til slutvægt. Stop og lad dræne.",
+        targetG: 300,
+        seconds: 55,
+      },
+      {
+        id: "finish",
+        label: "Finish",
+        instruction: "Swirl let. Smag og log resultat.",
+        seconds: 25,
+      },
     ],
     []
   );
 
-  const totalSeconds = useMemo(() => steps.reduce((acc, s) => acc + (s.seconds || 0), 0), [steps]);
+  const totalSeconds = useMemo(
+    () => steps.reduce((acc, s) => acc + (s.seconds || 0), 0),
+    [steps]
+  );
 
-  /* ---------- BREW STATE ---------- */
+  /* ---------- STATE ---------- */
+  const [stage, setStage] = useState<"prep" | "brew">("prep");
+  const [slideIdx, setSlideIdx] = useState(0);
+
   const [idx, setIdx] = useState(0);
   const [running, setRunning] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -156,17 +161,6 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
   const [stepElapsed, setStepElapsed] = useState(0);
 
   const current = steps[idx];
-  const isLast = idx === steps.length - 1;
-
-  const goToReview = useCallback(() => {
-    const qs = new URLSearchParams({
-      type,
-      slug,
-      seconds: String(elapsed),
-      method: "Pour-over",
-    });
-    window.location.href = `/brew/review?${qs.toString()}`;
-  }, [elapsed, slug, type]);
 
   /* ---------- TIMER ---------- */
   useEffect(() => {
@@ -180,27 +174,36 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
     return () => window.clearInterval(t);
   }, [running]);
 
-  /* ---------- AUTO ADVANCE ---------- */
+  /* ---------- AUTO ADVANCE + REVIEW ---------- */
   useEffect(() => {
-    if (!running) return;
-
     const limit = current.seconds || 0;
-    if (!limit) return;
+    if (!running || !limit) return;
     if (stepElapsed < limit) return;
 
     try {
       navigator.vibrate?.([40, 40, 40]);
     } catch {}
 
-    if (isLast) {
+    // sidste step => review
+    if (idx >= steps.length - 1) {
       setRunning(false);
-      goToReview();
+
+      const qs = new URLSearchParams({
+        type,
+        slug,
+        seconds: String(elapsed),
+        method: "Pour-over",
+      });
+
+      window.location.href = `/brew/review?${qs.toString()}`;
       return;
     }
 
-    setIdx((p) => Math.min(steps.length - 1, p + 1));
+    // ellers næste step (stopper auto så brugeren selv starter næste – “calm” UX)
+    setRunning(false);
+    setIdx((p) => p + 1);
     setStepElapsed(0);
-  }, [running, stepElapsed, current.seconds, isLast, steps.length, goToReview]);
+  }, [stepElapsed, running, current.seconds, idx, steps.length, elapsed, slug, type]);
 
   useEffect(() => {
     setStepElapsed(0);
@@ -222,7 +225,7 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
   const stepProgress = stepSeconds ? Math.min(1, stepElapsed / stepSeconds) : 0.12;
   const progressDeg = Math.round(stepProgress * 360);
 
-  const primaryValue = current.targetG ? `${current.targetG}g` : "—";
+  const primaryValue = current.targetG ? `${current.targetG}g` : idx === steps.length - 1 ? "Done" : "—";
 
   const actionLine = useMemo(() => {
     if (current.id === "prep") return "Prep – gør klar og nulstil vægten.";
@@ -231,88 +234,36 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
     return current.instruction;
   }, [current]);
 
-  const onPrimary = () => {
-    if (isLast && !running) {
-      goToReview();
-      return;
+  /* ---------- START BREW ---------- */
+  const startBrewFromPrep = () => {
+    setStage("brew");
+    setSlideIdx(0);
+
+    // reset brew state (så det føles “fresh”)
+    setIdx(0);
+    setRunning(false);
+    setElapsed(0);
+    setStepElapsed(0);
+    setSheetOpen(false);
+
+    // vigtigt: undgå scroll-position carry-over
+    try {
+      window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+    } catch {
+      window.scrollTo(0, 0);
     }
-    setRunning((v) => !v);
   };
 
-  const primaryText = isLast ? (running ? "Pause" : "Review") : running ? "Pause" : "Start";
-
-  /* ---------- RENDER: SETUP ---------- */
-  if (mode === "setup") {
-    const c = setupCards[setupIdx];
-    const isFirst = setupIdx === 0;
-    const isLastSetup = setupIdx === setupCards.length - 1;
-
-    return (
-      <main className={styles.page}>
-        <header className={styles.topBar}>
-          <a className={styles.iconBtn} href="/" aria-label="Tilbage">
-            ←
-          </a>
-
-          <div className={styles.topTitle}>
-            <div className={styles.kicker}>PREP</div>
-            <div className={styles.h1} title={title}>
-              {title}
-            </div>
-          </div>
-
-          <button className={styles.iconBtn} onClick={() => setMode("brew")} aria-label="Skip">
-            Skip
-          </button>
-        </header>
-
-        <section className={styles.setupWrap}>
-          <div className={styles.setupCard}>
-            <div className={styles.setupIcon}>
-              <Icon name={c.icon} />
-            </div>
-
-            <div className={styles.setupTitle}>{c.title}</div>
-            <div className={styles.setupBody}>{c.body}</div>
-            {c.meta ? <div className={styles.setupMeta}>{c.meta}</div> : null}
-
-            <div className={styles.dots} aria-label="Setup progress">
-              {setupCards.map((_, i) => (
-                <span key={i} className={`${styles.dot} ${i === setupIdx ? styles.dotOn : ""}`} />
-              ))}
-            </div>
-          </div>
-
-          <div className={styles.setupActions}>
-            <button className={styles.pillBtn} onClick={setupPrev} disabled={isFirst} aria-label="Forrige">
-              ‹
-            </button>
-
-            <button
-              className={`${styles.ctaBtn} ${styles.ctaBtnPrimary}`}
-              onClick={isLastSetup ? setupDone : setupNext}
-            >
-              {isLastSetup ? "Start Brew" : "Næste"}
-            </button>
-
-            <button className={styles.pillBtn} onClick={setupNext} disabled={isLastSetup} aria-label="Næste">
-              ›
-            </button>
-          </div>
-
-          <div className={styles.setupFooterHint}>
-            Når du trykker <strong>Start Brew</strong> får du timer + step-guidance uden scroll.
-          </div>
-        </section>
-      </main>
-    );
-  }
-
-  /* ---------- RENDER: BREW ---------- */
+  /* ---------- RENDER ---------- */
   return (
     <main className={styles.page}>
+      {/* TOP BAR */}
       <header className={styles.topBar}>
-        <a className={styles.iconBtn} href={slug ? `/coffees/${encodeURIComponent(slug)}` : "/"} aria-label="Tilbage">
+        <a
+          className={styles.iconBtn}
+          href={slug ? `/coffees/${encodeURIComponent(slug)}` : "/"}
+          aria-label="Tilbage"
+        >
           ←
         </a>
 
@@ -328,91 +279,177 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
         </button>
       </header>
 
-      <section className={styles.cockpit}>
-        <div className={styles.timerRow}>
-          <div className={styles.timer}>{formatMMSS(elapsed)}</div>
+      {/* ---------- STAGE 1: PREP SLIDES (over fold, no scroll) ---------- */}
+      {stage === "prep" && (
+        <section className={styles.prepStage} aria-label="Prep guide">
+          <div className={styles.prepCard}>
+            <div className={styles.prepIcon}>
+              <SlideIcon kind={slides[slideIdx].icon} />
+            </div>
 
-          <button className={styles.stepPill} onClick={() => setSheetOpen((v) => !v)} aria-expanded={sheetOpen}>
-            <span className={styles.pillIdx}>
-              {idx + 1}/{steps.length}
-            </span>
-            <span className={styles.pillLabel}>{current.label}</span>
-            <span className={styles.pillChevron}>{sheetOpen ? "▾" : "▴"}</span>
-          </button>
-        </div>
+            <h2 className={styles.prepTitle}>{slides[slideIdx].title}</h2>
 
-        <div className={styles.ringWrap}>
-          <div
-            className={styles.ring}
-            style={{
-              background: `conic-gradient(var(--accent1) 0deg ${progressDeg}deg, rgba(255,255,255,.10) ${progressDeg}deg 360deg)`,
-            }}
-            aria-label="Step progress"
-          >
-            <div className={styles.ringInner}>
-              <div className={styles.bigNumber}>{isLast ? "Done" : primaryValue}</div>
+            <p className={styles.prepBody}>
+              {slides[slideIdx].body.split("\n").map((line, i) => (
+                <span key={i}>
+                  {line}
+                  {i < slides[slideIdx].body.split("\n").length - 1 ? <br /> : null}
+                </span>
+              ))}
+            </p>
+
+            <div className={styles.dots} aria-label="Guide progress">
+              {slides.map((s, i) => (
+                <span key={s.id} className={`${styles.dot} ${i === slideIdx ? styles.dotActive : ""}`} />
+              ))}
             </div>
           </div>
-        </div>
 
-        <p className={styles.instruction}>
-          <strong>{actionLine}</strong>
-          <br />
-          <span className={styles.subInstruction}>{current.instruction}</span>
-        </p>
-
-        <div className={styles.controls}>
-          <button className={styles.btn} onClick={goPrev} disabled={idx === 0} aria-label="Forrige step">
-            ←
-          </button>
-
-          <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={onPrimary}>
-            {primaryText}
-          </button>
-
-          <button className={styles.btn} onClick={goNext} disabled={idx === steps.length - 1} aria-label="Næste step">
-            →
-          </button>
-        </div>
-
-        <div className={styles.microRow}>
-          <span>
-            Step tilbage: <strong>{stepSeconds ? formatMMSS(Math.max(0, stepSeconds - stepElapsed)) : "—"}</strong>
-          </span>
-          <span>
-            Total: <strong>{formatMMSS(totalSeconds)}</strong>
-          </span>
-        </div>
-      </section>
-
-      <section className={`${styles.sheet} ${sheetOpen ? styles.sheetOpen : ""}`}>
-        <div className={styles.sheetHandle} onClick={() => setSheetOpen((v) => !v)} role="button" tabIndex={0} />
-
-        <div className={styles.stepList}>
-          {steps.map((s, i) => (
+          <div className={styles.prepNav}>
             <button
-              key={s.id}
-              className={`${styles.stepRow} ${i === idx ? styles.stepRowActive : ""}`}
+              className={styles.navCircle}
+              onClick={() => setSlideIdx((p) => Math.max(0, p - 1))}
+              disabled={slideIdx === 0}
+              aria-label="Forrige"
+            >
+              ‹
+            </button>
+
+            <button
+              className={styles.primaryCta}
               onClick={() => {
-                setRunning(false);
-                setIdx(i);
-                setSheetOpen(false);
+                if (slideIdx < slides.length - 1) setSlideIdx((p) => p + 1);
+                else startBrewFromPrep();
               }}
             >
-              <div className={styles.stepLeft}>
-                <div className={styles.bullet}>{i + 1}</div>
-                <div>
-                  <div className={styles.rowTitle}>{s.label}</div>
-                  <div className={styles.rowSub}>
-                    {s.targetG ? `${s.targetG}g` : "—"} · {s.seconds ? `${s.seconds}s` : "—"}
-                  </div>
+              {slideIdx < slides.length - 1 ? "Næste" : "Start Brew"}
+            </button>
+
+            <button
+              className={styles.navCircle}
+              onClick={() => setSlideIdx((p) => Math.min(slides.length - 1, p + 1))}
+              disabled={slideIdx === slides.length - 1}
+              aria-label="Næste"
+            >
+              ›
+            </button>
+          </div>
+
+          <button className={styles.skipLink} onClick={startBrewFromPrep}>
+            Skip
+          </button>
+        </section>
+      )}
+
+      {/* ---------- STAGE 2: BREW COCKPIT ---------- */}
+      {stage === "brew" && (
+        <>
+          <section className={styles.cockpit}>
+            <div className={styles.timerRow}>
+              <div className={styles.timer}>{formatMMSS(elapsed)}</div>
+
+              <button className={styles.stepPill} onClick={() => setSheetOpen((v) => !v)}>
+                <span className={styles.pillIdx}>
+                  {idx + 1}/{steps.length}
+                </span>
+                <span className={styles.pillLabel}>{current.label}</span>
+                <span className={styles.pillChevron}>{sheetOpen ? "▾" : "▴"}</span>
+              </button>
+            </div>
+
+            <div className={styles.ringWrap}>
+              <div
+                className={styles.ring}
+                style={{
+                  background: `conic-gradient(var(--accent1) 0deg ${progressDeg}deg, rgba(255,255,255,.10) ${progressDeg}deg 360deg)`,
+                }}
+              >
+                <div className={styles.ringInner}>
+                  <div className={styles.bigNumber}>{primaryValue}</div>
                 </div>
               </div>
-              <div className={styles.chev}>›</div>
-            </button>
-          ))}
-        </div>
-      </section>
+            </div>
+
+            <p className={styles.instruction}>
+              <strong>{actionLine}</strong>
+              <br />
+              <span className={styles.subInstruction}>{current.instruction}</span>
+            </p>
+
+            <div className={styles.controls}>
+              <button className={styles.btn} onClick={goPrev} disabled={idx === 0}>
+                ←
+              </button>
+
+              <button
+                className={`${styles.btn} ${styles.btnPrimary}`}
+                onClick={() => {
+                  // sidste step: knappen bliver “Review”
+                  if (idx >= steps.length - 1) {
+                    const qs = new URLSearchParams({
+                      type,
+                      slug,
+                      seconds: String(elapsed),
+                      method: "Pour-over",
+                    });
+                    window.location.href = `/brew/review?${qs.toString()}`;
+                    return;
+                  }
+                  setRunning((v) => !v);
+                }}
+              >
+                {idx >= steps.length - 1 ? "Review" : running ? "Pause" : "Start"}
+              </button>
+
+              <button className={styles.btn} onClick={goNext} disabled={idx === steps.length - 1}>
+                →
+              </button>
+            </div>
+
+            <div className={styles.microRow}>
+              <span>
+                Step tilbage:{" "}
+                <strong>
+                  {stepSeconds ? formatMMSS(Math.max(0, stepSeconds - stepElapsed)) : "—"}
+                </strong>
+              </span>
+              <span>
+                Total: <strong>{formatMMSS(totalSeconds)}</strong>
+              </span>
+            </div>
+          </section>
+
+          {/* Bottom sheet (kan beholdes / kan fjernes når UI er helt “one-screen”) */}
+          <section className={`${styles.sheet} ${sheetOpen ? styles.sheetOpen : ""}`}>
+            <div className={styles.sheetHandle} onClick={() => setSheetOpen((v) => !v)} />
+
+            <div className={styles.stepList}>
+              {steps.map((s, i) => (
+                <button
+                  key={s.id}
+                  className={`${styles.stepRow} ${i === idx ? styles.stepRowActive : ""}`}
+                  onClick={() => {
+                    setRunning(false);
+                    setIdx(i);
+                    setSheetOpen(false);
+                  }}
+                >
+                  <div className={styles.stepLeft}>
+                    <div className={styles.bullet}>{i + 1}</div>
+                    <div>
+                      <div className={styles.rowTitle}>{s.label}</div>
+                      <div className={styles.rowSub}>
+                        {s.targetG ? `${s.targetG}g` : "—"} · {s.seconds ? `${s.seconds}s` : "—"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.chev}>›</div>
+                </button>
+              ))}
+            </div>
+          </section>
+        </>
+      )}
     </main>
   );
 }
