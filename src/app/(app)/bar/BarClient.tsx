@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import styles from "./BarPage.module.css";
+import styles from "./BarClient.module.css";
 
 type Item = {
   id: string;
@@ -25,10 +25,18 @@ function getUserKey() {
   return newKey;
 }
 
-function productHref(slug: string) {
+function isTeaSlug(slug: string) {
   const s = slug.toLowerCase();
-  const isTea = s.startsWith("tea-") || s.includes("tea") || s.includes("matcha");
-  return isTea ? `/teas/${slug}` : `/coffees/${slug}`;
+  return s.startsWith("tea-") || s.includes("tea") || s.includes("matcha");
+}
+
+function productHref(slug: string) {
+  return isTeaSlug(slug) ? `/teas/${slug}` : `/coffees/${slug}`;
+}
+
+function brewHref(slug: string) {
+  const type = isTeaSlug(slug) ? "tea" : "coffee";
+  return `/brew?type=${type}&slug=${encodeURIComponent(slug)}`;
 }
 
 export default function BarClient() {
@@ -93,19 +101,25 @@ export default function BarClient() {
       const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
       if (!url || !anon) throw new Error("Missing Supabase env vars");
 
-      const res = await fetch(`${url}/rest/v1/inventory?id=eq.${encodeURIComponent(id)}`, {
-        method: "DELETE",
-        headers: {
-          apikey: anon,
-          Authorization: `Bearer ${anon}`,
-          "Content-Type": "application/json",
-          Prefer: "return=minimal",
-          "x-user-key": userKey,
-        },
-      });
+      const res = await fetch(
+        `${url}/rest/v1/inventory?id=eq.${encodeURIComponent(id)}`,
+        {
+          method: "DELETE",
+          headers: {
+            apikey: anon,
+            Authorization: `Bearer ${anon}`,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+            "x-user-key": userKey,
+          },
+        }
+      );
 
       const text = await res.text();
       if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
+
+      // 🔔 badge refresh
+      window.dispatchEvent(new Event("brewnote_bar_changed"));
     } catch (e: any) {
       setItems(prev); // rollback
       setError(e?.message || "Kunne ikke fjerne");
@@ -144,30 +158,41 @@ export default function BarClient() {
 
   return (
     <div className={styles.grid}>
-      {items.map((it) => (
-        <article key={it.id} className={styles.card}>
-          <div className={styles.cardTop}>
-            <div className={styles.small}>Tilføjet</div>
-            <button
-              type="button"
-              className={styles.remove}
-              onClick={() => removeItem(it.id)}
-              disabled={busyId === it.id}
-              aria-label="Fjern fra Bar"
-              title="Fjern"
-            >
-              {busyId === it.id ? "Fjerner…" : "Fjern"}
-            </button>
-          </div>
+      {items.map((it) => {
+        const pretty = it.product_slug.replaceAll("-", " ");
+        const tea = isTeaSlug(it.product_slug);
 
-          <Link href={productHref(it.product_slug)} className={styles.cardLink}>
-            <div className={styles.title}>
-              {it.product_slug.replaceAll("-", " ")}
+        return (
+          <article key={it.id} className={styles.card}>
+            <div className={styles.cardTop}>
+              <div className={styles.kicker}>{tea ? "Te" : "Kaffe"}</div>
+
+              <button
+                type="button"
+                className={styles.remove}
+                onClick={() => removeItem(it.id)}
+                disabled={busyId === it.id}
+                aria-label="Fjern fra Bar"
+                title="Fjern"
+              >
+                {busyId === it.id ? "Fjerner…" : "Fjern"}
+              </button>
             </div>
-            <div className={styles.open}>Åbn produkt →</div>
-          </Link>
-        </article>
-      ))}
+
+            <div className={styles.title}>{pretty}</div>
+
+            <div className={styles.actions}>
+              <Link className={styles.primary} href={brewHref(it.product_slug)}>
+                Bryg nu
+              </Link>
+
+              <Link className={styles.secondary} href={productHref(it.product_slug)}>
+                Åbn produkt
+              </Link>
+            </div>
+          </article>
+        );
+      })}
     </div>
   );
 }
