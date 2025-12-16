@@ -8,7 +8,7 @@ type TasteNote = { label: string; count: number };
 type BrewVariation = { id: string; method: string; description: string; time: string };
 
 type Props = {
-  slug: string; // ✅ bruges til inventory + feedback
+  slug: string; // ✅ bruges til inventory + feedback + latest brew
   name: string;
   meta: string;
 
@@ -29,6 +29,15 @@ type Props = {
 
 type Tab = "overview" | "brew" | "reviews" | "learn";
 
+type LatestBrew = {
+  created_at: string;
+  method: string | null;
+  ratio_label: string | null;
+  dose_g: number | null;
+  water_g: number | null;
+  total_seconds: number | null;
+};
+
 function getUserKey() {
   if (typeof window === "undefined") return "server";
   const existing = window.localStorage.getItem("brewnote_user_key");
@@ -45,6 +54,13 @@ function getUserKey() {
 
 function clamp01(x: number) {
   return Math.max(0, Math.min(1, x));
+}
+
+function formatTime(total: number | null) {
+  if (!total || total < 0) return "—";
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 export default function ProductScreen({
@@ -69,6 +85,10 @@ export default function ProductScreen({
   const [added, setAdded] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [checkingAdded, setCheckingAdded] = useState(true);
+
+  // Latest brew state
+  const [latest, setLatest] = useState<LatestBrew | null>(null);
+  const [latestLoading, setLatestLoading] = useState(true);
 
   // Stub-data (skiftes til Supabase senere)
   const rating = useMemo(() => ({ score: 4.3, count: 5072 }), []);
@@ -114,7 +134,7 @@ export default function ProductScreen({
     return text ? JSON.parse(text) : null;
   }
 
-  // -------- On mount: check if already in inventory + load preference --------
+  // -------- On mount: check inventory + load preference + latest brew --------
 
   useEffect(() => {
     let alive = true;
@@ -137,9 +157,8 @@ export default function ProductScreen({
 
         if (!alive) return;
         setAdded(Array.isArray(data) && data.length > 0);
-      } catch (e: any) {
+      } catch {
         if (!alive) return;
-        // ikke fatal – men vis ikke rød fejl med det samme
         setAddError(null);
       } finally {
         if (alive) setCheckingAdded(false);
@@ -159,8 +178,28 @@ export default function ProductScreen({
         if (!alive) return;
         const p = Array.isArray(data) && data[0]?.preference;
         if (p === "like" || p === "dislike") setPreference(p);
-      } catch (e: any) {
-        // ignore (non fatal)
+      } catch {
+        // ignore
+      }
+
+      // 3) Load latest brew (via API route)
+      setLatestLoading(true);
+      try {
+        const res = await fetch(
+          `/api/brew/latest?user_key=${encodeURIComponent(user_key)}&product_slug=${encodeURIComponent(slug)}`,
+          { cache: "no-store" }
+        );
+
+        const json = await res.json();
+        if (!res.ok || !json?.ok) throw new Error(json?.body || `HTTP ${res.status}`);
+
+        if (!alive) return;
+        setLatest(json.latest || null);
+      } catch {
+        if (!alive) return;
+        setLatest(null);
+      } finally {
+        if (alive) setLatestLoading(false);
       }
     }
 
@@ -205,7 +244,7 @@ export default function ProductScreen({
     setPreference(next);
     setPrefError(null);
 
-    // (vi implementerer “slet preference” senere; nu gemmer vi kun hvis valgt)
+    // (slet preference senere; nu gemmer vi kun hvis valgt)
     if (!next) return;
 
     setPrefSaving(true);
@@ -213,15 +252,12 @@ export default function ProductScreen({
     try {
       const user_key = getUserKey();
 
-      // upsert
       await sbFetch(
         `/rest/v1/product_feedback?on_conflict=user_key,product_slug`,
         {
           method: "POST",
           headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-          body: JSON.stringify([
-            { user_key, product_slug: slug, preference: next },
-          ]),
+          body: JSON.stringify([{ user_key, product_slug: slug, preference: next }]),
         },
         user_key
       );
@@ -283,9 +319,7 @@ export default function ProductScreen({
                 <button
                   type="button"
                   className={preference === "dislike" ? styles.active : ""}
-                  onClick={() =>
-                    savePreference(preference === "dislike" ? null : "dislike")
-                  }
+                  onClick={() => savePreference(preference === "dislike" ? null : "dislike")}
                   disabled={prefSaving}
                 >
                   Jeg kan ikke lide
@@ -367,6 +401,46 @@ export default function ProductScreen({
             <div className={styles.socialProof}>
               Mest brygget som <strong>{recommendedBrew.method}</strong> (62%)
             </div>
+          </div>
+
+          {/* ✅ Din seneste bryg */}
+          <div className={styles.spacer} />
+          <div className={styles.latestCard}>
+            <div className={styles.latestTop}>
+              <h3>Din seneste bryg</h3>
+              <span className={styles.latestMeta}>
+                {latestLoading ? "Indlæser…" : latest ? "Logget" : "Ingen endnu"}
+              </span>
+            </div>
+
+            {latest ? (
+              <div className={styles.latestGrid}>
+                <div>
+                  <div className={styles.latestLabel}>Metode</div>
+                  <div className={styles.latestValue}>{latest.method || "—"}</div>
+                </div>
+                <div>
+                  <div className={styles.latestLabel}>Tid</div>
+                  <div className={styles.latestValue}>
+                    {formatTime(latest.total_seconds)}
+                  </div>
+                </div>
+                <div>
+                  <div className={styles.latestLabel}>Ratio</div>
+                  <div className={styles.latestValue}>{latest.ratio_label || "—"}</div>
+                </div>
+                <div>
+                  <div className={styles.latestLabel}>Dose / vand</div>
+                  <div className={styles.latestValue}>
+                    {latest.dose_g ?? "—"}g / {latest.water_g ?? "—"}g
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className={styles.latestEmpty}>
+                Bryg denne én gang, så begynder BrewNote at lære din stil.
+              </div>
+            )}
           </div>
 
           <div className={styles.spacer} />
