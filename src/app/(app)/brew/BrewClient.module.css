@@ -1,9 +1,6 @@
 /* app/brew/BrewClient.module.css */
 
-/* ---------- Route-only body lock (ingen scroll) ---------- */
-:global(body) {
-  overflow: hidden;
-}
+
 
 /* ---------- Theme fallbacks (hvis du ikke har vars globalt) ---------- */
 :global(:root) {
