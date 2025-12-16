@@ -3,7 +3,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   const { fileName } = await req.json();
-  const supabase = createClient();
+const supabase = supabaseServer();
 
   // 1. kræv login
   const {
