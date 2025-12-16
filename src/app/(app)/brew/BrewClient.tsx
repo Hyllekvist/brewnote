@@ -280,66 +280,73 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
       </header>
 
       {/* ---------- STAGE 1: PREP SLIDES (over fold, no scroll) ---------- */}
-      {stage === "prep" && (
-        <section className={styles.prepStage} aria-label="Prep guide">
-          <div className={styles.prepCard}>
-            <div className={styles.prepIcon}>
-              <SlideIcon kind={slides[slideIdx].icon} />
-            </div>
+    {stage === "prep" && (
+  <section className={styles.prepStage} aria-label="Prep guide">
+    <div className={styles.prepCard}>
+      <div className={styles.prepIcon}>
+        <SlideIcon kind={slides[slideIdx].icon} />
+      </div>
 
-            <h2 className={styles.prepTitle}>{slides[slideIdx].title}</h2>
+      <h2 className={styles.prepTitle}>{slides[slideIdx].title}</h2>
 
-            <p className={styles.prepBody}>
-              {slides[slideIdx].body.split("\n").map((line, i) => (
-                <span key={i}>
-                  {line}
-                  {i < slides[slideIdx].body.split("\n").length - 1 ? <br /> : null}
-                </span>
-              ))}
-            </p>
+      <p className={styles.prepText}>
+        {slides[slideIdx].body.split("\n").map((line, i, arr) => (
+          <span key={i}>
+            {line}
+            {i < arr.length - 1 ? <br /> : null}
+          </span>
+        ))}
+      </p>
 
-            <div className={styles.dots} aria-label="Guide progress">
-              {slides.map((s, i) => (
-                <span key={s.id} className={`${styles.dot} ${i === slideIdx ? styles.dotActive : ""}`} />
-              ))}
-            </div>
-          </div>
+      <div className={styles.dots} aria-label="Guide progress">
+        {slides.map((s, i) => (
+          <span
+            key={s.id}
+            className={`${styles.dot} ${i === slideIdx ? styles.dotActive : ""}`}
+          />
+        ))}
+      </div>
+    </div>
 
-          <div className={styles.prepNav}>
-            <button
-              className={styles.navCircle}
-              onClick={() => setSlideIdx((p) => Math.max(0, p - 1))}
-              disabled={slideIdx === 0}
-              aria-label="Forrige"
-            >
-              ‹
-            </button>
+    <div className={styles.prepFooter}>
+      <button
+        type="button"
+        className={styles.navBtn}
+        onClick={() => setSlideIdx((p) => Math.max(0, p - 1))}
+        disabled={slideIdx === 0}
+        aria-label="Forrige"
+      >
+        ‹
+      </button>
 
-            <button
-              className={styles.primaryCta}
-              onClick={() => {
-                if (slideIdx < slides.length - 1) setSlideIdx((p) => p + 1);
-                else startBrewFromPrep();
-              }}
-            >
-              {slideIdx < slides.length - 1 ? "Næste" : "Start Brew"}
-            </button>
+      <button
+        type="button"
+        className={styles.primaryCta}
+        onClick={() => {
+          if (slideIdx < slides.length - 1) setSlideIdx((p) => p + 1);
+          else startBrewFromPrep();
+        }}
+      >
+        {slideIdx < slides.length - 1 ? "Næste" : "Start Brew"}
+      </button>
 
-            <button
-              className={styles.navCircle}
-              onClick={() => setSlideIdx((p) => Math.min(slides.length - 1, p + 1))}
-              disabled={slideIdx === slides.length - 1}
-              aria-label="Næste"
-            >
-              ›
-            </button>
-          </div>
+      <button
+        type="button"
+        className={styles.navBtn}
+        onClick={() => setSlideIdx((p) => Math.min(slides.length - 1, p + 1))}
+        disabled={slideIdx === slides.length - 1}
+        aria-label="Næste"
+      >
+        ›
+      </button>
+    </div>
 
-          <button className={styles.skipLink} onClick={startBrewFromPrep}>
-            Skip
-          </button>
-        </section>
-      )}
+    <button type="button" className={styles.skipBtn} onClick={startBrewFromPrep}>
+      Skip
+    </button>
+  </section>
+)}
+
 
       {/* ---------- STAGE 2: BREW COCKPIT ---------- */}
       {stage === "brew" && (
