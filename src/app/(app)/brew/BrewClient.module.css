@@ -458,3 +458,23 @@
   .subInstruction { display: none; }
   .sheet { transform: translateY(78%); }
 }
+
+.navBtn,
+.primaryCta,
+.skipBtn {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  outline: none;
+  font: inherit;
+}
+
+.skipBtn {
+  height: 44px;
+  width: 100%;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.85);
+  font-weight: 800;
+}
