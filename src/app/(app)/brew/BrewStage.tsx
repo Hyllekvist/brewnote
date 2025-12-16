@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./BrewStage.module.css";
 
 export type BrewPhase = "bloom" | "pour" | "finish";
@@ -67,13 +67,59 @@ export function BrewStage({
   const isLast = activeIndex === steps.length - 1;
   const isTimed = Boolean(step?.seconds && step.seconds > 0);
 
-  // progress kun når timed
+  // ---------- Smooth visual time (interpolates between 1s ticks) ----------
+  const [visualElapsed, setVisualElapsed] = useState<number>(elapsedSeconds);
+  const rafRef = useRef<number | null>(null);
+  const baseRef = useRef<number>(elapsedSeconds);
+  const startMsRef = useRef<number>(0);
+
+  // Reset visual timer when elapsedSeconds jumps (new step / reset / etc.)
+  useEffect(() => {
+    baseRef.current = elapsedSeconds;
+    setVisualElapsed(elapsedSeconds);
+    startMsRef.current = performance.now();
+  }, [elapsedSeconds, activeIndex]);
+
+  // Run RAF while running (but only needed for timed steps)
+  useEffect(() => {
+    if (!isRunning || !isTimed) {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+      // keep it snapped to real elapsed
+      setVisualElapsed(elapsedSeconds);
+      return;
+    }
+
+    startMsRef.current = performance.now();
+
+    const loop = () => {
+      const now = performance.now();
+      const delta = (now - startMsRef.current) / 1000;
+
+      // Visual should move smoothly from last whole second tick:
+      const next = baseRef.current + delta;
+
+      // Never exceed totalSeconds
+      setVisualElapsed(Math.min(next, totalSeconds));
+
+      rafRef.current = requestAnimationFrame(loop);
+    };
+
+    rafRef.current = requestAnimationFrame(loop);
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    };
+  }, [isRunning, isTimed, elapsedSeconds, totalSeconds]);
+
+  // progress kun når timed (use visualElapsed for smooth ring)
   const progress = useMemo(() => {
     if (!isTimed) return 0;
-    return clamp01(elapsedSeconds / (totalSeconds || 1));
-  }, [elapsedSeconds, isTimed, totalSeconds]);
+    return clamp01(visualElapsed / (totalSeconds || 1));
+  }, [visualElapsed, isTimed, totalSeconds]);
 
-  // tick loop (1s)
+  // tick loop (1s) - uændret
   useEffect(() => {
     if (!isRunning) return;
     const t = setInterval(() => {
@@ -82,13 +128,13 @@ export function BrewStage({
     return () => clearInterval(t);
   }, [isRunning, onTick]);
 
-  // auto-advance (efter tick)
+  // auto-advance (efter tick) - uændret
   useEffect(() => {
     if (!isRunning) return;
     onAutoAdvanceIfNeeded();
   }, [elapsedSeconds, isRunning, onAutoAdvanceIfNeeded]);
 
-  // finish hook (hvis sidste step og nået tid)
+  // finish hook (hvis sidste step og nået tid) - uændret (baseret på real elapsedSeconds)
   useEffect(() => {
     if (!isRunning) return;
     if (!isLast) return;
@@ -105,6 +151,7 @@ export function BrewStage({
   useEffect(() => {
     const el = rootRef.current;
     if (!el || !canTap) return;
+
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.key === "Enter" || e.key === " ") && onTap) {
         e.preventDefault();
@@ -115,11 +162,15 @@ export function BrewStage({
         onBack();
       }
     };
+
     el.addEventListener("keydown", onKeyDown);
     return () => el.removeEventListener("keydown", onKeyDown);
   }, [canTap, onBack, onTap]);
 
   const phase = step?.phase ?? "pour";
+
+  // countdown text: brug real elapsedSeconds så tallet skifter pr sekund (læsbart)
+  const remaining = isTimed ? Math.max(0, totalSeconds - elapsedSeconds) : elapsedSeconds;
 
   return (
     <div
@@ -160,14 +211,14 @@ export function BrewStage({
           <div className={styles.dialOuter}>
             <div className={styles.dialInner}>
               <div className={styles.time}>
-                {isTimed ? formatMMSS(Math.max(0, totalSeconds - elapsedSeconds)) : formatMMSS(elapsedSeconds)}
+                {isTimed ? formatMMSS(remaining) : formatMMSS(elapsedSeconds)}
               </div>
               <div className={styles.subline}>
                 {isTimed ? "til næste step" : "kørsel"}
               </div>
             </div>
 
-            {/* ring */}
+            {/* ring - smooth progress */}
             <div
               className={styles.ring}
               style={{
@@ -178,9 +229,7 @@ export function BrewStage({
         </div>
 
         {canTap ? (
-          <div className={styles.hint}>
-            Tryk hvor som helst for næste step
-          </div>
+          <div className={styles.hint}>Tryk hvor som helst for næste step</div>
         ) : (
           <div className={styles.hintGhost} />
         )}
