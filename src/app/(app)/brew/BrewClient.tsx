@@ -108,24 +108,34 @@ export default function BrewClient({
   /* ---------- AUTO ADVANCE ---------- */
 
   useEffect(() => {
-    const limit = current.seconds || 0;
-    if (!running || !limit) return;
-    if (stepElapsed < limit) return;
+  const limit = current.seconds || 0;
+  if (!running || !limit) return;
+  if (stepElapsed < limit) return;
 
-    try {
-      navigator.vibrate?.([40, 40, 40]);
-    } catch {}
+  try {
+    navigator.vibrate?.([40, 40, 40]);
+  } catch {}
 
-    if (idx >= steps.length - 1) {
-      setRunning(false);
-      return;
-    }
-
+  // ✅ sidste step: gå til review
+  if (idx >= steps.length - 1) {
     setRunning(false);
-    setIdx((p) => p + 1);
-    setStepElapsed(0);
-  }, [stepElapsed, running, current.seconds, idx, steps.length]);
 
+    const qs = new URLSearchParams({
+      type,
+      slug,
+      seconds: String(elapsed),
+      method: "Pour-over",
+    });
+
+    window.location.href = `/brew/review?${qs.toString()}`;
+    return;
+  }
+
+  // ellers: næste step
+  setRunning(false);
+  setIdx((p) => p + 1);
+  setStepElapsed(0);
+}, [stepElapsed, running, current.seconds, idx, steps.length, elapsed, slug, type]);
   /* ---------- MANUAL NAV ---------- */
 
   const goPrev = () => {
