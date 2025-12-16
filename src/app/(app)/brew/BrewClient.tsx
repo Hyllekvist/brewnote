@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo, useState } from "react";
 
-// ✅ stages (tilpas path hvis nødvendigt)
 import { PrepStage } from "./PrepStage";
 import { BrewStage, type BrewStep, type BrewPhase } from "./BrewStage";
 import { FinishStage } from "./FinishStage";
@@ -12,7 +11,6 @@ function toTitle(type: string, slug: string) {
   return type === "tea" ? `Tea Brew — ${name}` : `Coffee Brew — ${name}`;
 }
 
-// 🔒 v1: map label/id -> phase (ring semantik)
 function phaseForStep(id: string, label: string): BrewPhase {
   const l = (label || "").toLowerCase();
   if (id === "bloom" || l.includes("bloom")) return "bloom";
@@ -37,7 +35,6 @@ function getUserKey() {
 export default function BrewClient({ type, slug }: { type: string; slug: string }) {
   const title = useMemo(() => toTitle(type, slug), [type, slug]);
 
-  // ✅ steps — nu med phase
   const steps: BrewStep[] = useMemo(
     () => [
       {
@@ -80,24 +77,18 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
     [steps]
   );
 
-  // 🔒 stages: prep -> brew -> finish
   const [stage, setStage] = useState<"prep" | "brew" | "finish">("prep");
 
-  // brew state
   const [activeIndex, setActiveIndex] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
 
-  // save state
   const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
 
-  // tick
   const onTick = useCallback(() => {
     setElapsedSeconds((p) => p + 1);
   }, []);
 
-  // auto-advance når step-tid er gået
   const onAutoAdvanceIfNeeded = useCallback(() => {
     const step = steps[activeIndex];
     const stepSeconds = step?.seconds ?? 0;
@@ -124,13 +115,11 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
     setActiveIndex((i) => Math.min(steps.length - 1, i + 1));
   }, [steps, activeIndex, elapsedSeconds]);
 
-  // finish (hard stop)
   const onFinish = useCallback(() => {
     setIsRunning(false);
     setStage("finish");
   }, []);
 
-  // tap-to-skip (gesture)
   const onTap = useCallback(() => {
     const isLast = activeIndex >= steps.length - 1;
     if (isLast) {
@@ -143,7 +132,6 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
     setActiveIndex((i) => Math.min(steps.length - 1, i + 1));
   }, [activeIndex, steps.length, onFinish]);
 
-  // start brew
   const startBrew = useCallback(() => {
     setStage("brew");
     setActiveIndex(0);
@@ -157,18 +145,15 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
     }
   }, []);
 
-  // --- brew params (v1 hardcoded; næste step er at gøre dem dynamiske) ---
+  // v1 hardcoded (gør dynamisk senere)
   const doseG = 18;
   const waterG = 300;
   const ratioLabel = "1:16.7";
   const methodName = "Pour-over";
 
-  // save brew -> logger brew_sessions -> redirect review
   const saveBrew = useCallback(async () => {
     if (isSaving) return;
-
     setIsSaving(true);
-    setSaveError(null);
 
     try {
       const user_key = getUserKey();
@@ -204,25 +189,12 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
 
       window.location.href = `/brew/review?${qs.toString()}`;
     } catch (e: any) {
-      const msg = e?.message || "Kunne ikke gemme bryg";
-      setSaveError(msg);
-      alert(msg);
+      alert(e?.message || "Kunne ikke gemme bryg");
     } finally {
       setIsSaving(false);
     }
-  }, [
-    isSaving,
-    slug,
-    type,
-    elapsedSeconds,
-    totalPlannedSeconds,
-    doseG,
-    waterG,
-    ratioLabel,
-    methodName,
-  ]);
+  }, [isSaving, slug, type, elapsedSeconds, totalPlannedSeconds]);
 
-  // summary til prep
   const prepSummary = useMemo(() => {
     return {
       title,
@@ -231,27 +203,16 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
       ratioLabel,
       estTotalSeconds: totalPlannedSeconds,
     };
-  }, [title, totalPlannedSeconds, doseG, waterG, ratioLabel]);
+  }, [title, totalPlannedSeconds]);
 
-  // render stage
   if (stage === "prep") {
     return <PrepStage summary={prepSummary} onStart={startBrew} />;
   }
 
   if (stage === "finish") {
-    return (
-      <FinishStage
-        title="Brew complete"
-        onSave={saveBrew}
-        // hvis din FinishStage ikke understøtter props her, så ignorer dem
-        // (jeg kan opdatere FinishStage bagefter)
-        isSaving={isSaving as any}
-        error={saveError as any}
-      />
-    );
+    return <FinishStage title="Brew complete" onSave={saveBrew} />;
   }
 
-  // stage === "brew"
   return (
     <BrewStage
       steps={steps}
