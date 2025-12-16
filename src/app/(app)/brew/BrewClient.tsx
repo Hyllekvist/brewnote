@@ -181,6 +181,12 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
       if (!res.ok || !json?.ok) {
         throw new Error(json?.body || `HTTP ${res.status}`);
       }
+      window.dispatchEvent(new Event("brewnote_brew_logged"));
+
+// (valgfrit) hvis du også vil trigge badge/list reload generelt:
+window.dispatchEvent(new Event("brewnote_bar_changed"));
+
+window.location.href = `/brew/review?${qs.toString()}`;
 
       const qs = new URLSearchParams({
         type,
