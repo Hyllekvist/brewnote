@@ -55,6 +55,10 @@ function fmtRelativeDate(iso: string | null) {
   return d.toLocaleDateString("da-DK", { day: "2-digit", month: "short" });
 }
 
+function prettyName(slug: string) {
+  return slug.replaceAll("-", " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export default function BarClient() {
   const [items, setItems] = useState<Item[]>([]);
   const [stats, setStats] = useState<Record<string, BrewStat>>({});
@@ -279,7 +283,7 @@ export default function BarClient() {
 
       <div className={styles.grid}>
         {shown.map((it) => {
-          const pretty = it.product_slug.replaceAll("-", " ");
+const pretty = prettyName(it.product_slug);
           const tea = isTeaSlug(it.product_slug);
           const st = stats[it.product_slug];
           const brewCount = st?.brew_count ?? 0;
@@ -295,6 +299,9 @@ export default function BarClient() {
               </div>
 
               <div className={styles.title}>{pretty}</div>
+<div className={styles.metaLine}>
+  {tea ? "Te" : "Kaffe"} · Tilføjet {fmtRelativeDate(it.created_at)}
+</div>
 
               <div className={styles.statsRow}>
                 <span className={styles.statPill}>{brewCount} bryg</span>
