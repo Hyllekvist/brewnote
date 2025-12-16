@@ -1,27 +1,39 @@
 .root {
   min-height: 100vh;
-  padding: 24px;
+  padding: 88px 24px 28px; /* plads til din globale header */
   display: flex;
   flex-direction: column;
   background: var(--bg);
   color: var(--ink);
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+@media (max-width: 640px) {
+  .root {
+    padding: 76px 16px 22px;
+  }
 }
 
 .header {
   text-align: center;
-  margin-top: 24px;
+  margin-top: 12px;
 }
 
 .kicker {
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  opacity: 0.6;
-  font-size: 12px;
+  opacity: 0.55;
+  font-size: 11px;
 }
 
 .instruction {
-  font-size: 18px;
-  margin-top: 8px;
+  font-size: 20px;
+  line-height: 1.35;
+  margin-top: 10px;
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .ringWrap {
@@ -29,44 +41,125 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 28px 0;
 }
 
+/* RING: base */
 .ring {
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  border: 3px solid var(--ink);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 260px;
+  height: 260px;
+  border-radius: 999px;
+  position: relative;
+
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  background: radial-gradient(
+    closest-side,
+    rgba(255, 255, 255, 0.06),
+    transparent 70%
+  );
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4) inset;
+
+  display: grid;
+  place-items: center;
+}
+
+/* glow */
+.ring::before {
+  content: "";
+  position: absolute;
+  inset: -18px;
+  border-radius: inherit;
+  background: radial-gradient(closest-side, var(--ringGlow), transparent 65%);
+  filter: blur(10px);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* inner rim */
+.ring::after {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  pointer-events: none;
 }
 
 .center {
-  font-size: 32px;
+  font-size: 44px;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
+}
+
+.sub {
+  margin-top: 6px;
+  opacity: 0.6;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .meta {
   display: flex;
   justify-content: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
 }
 
 .metaPill {
-  padding: 6px 12px;
+  padding: 7px 12px;
   border-radius: 999px;
   background: var(--panel);
   font-size: 12px;
+  opacity: 0.9;
 }
 
 .hint {
   text-align: center;
-  opacity: 0.4;
+  opacity: 0.35;
   font-size: 12px;
+  margin-top: 6px;
 }
 
-/* Phase hooks – tomme med vilje */
-.phase_bloom {}
-.phase_pour {}
-.phase_finish {}
+/* Phase hooks – nu med faktisk effekt */
+.phase_bloom {
+  --ringGlow: rgba(230, 210, 111, 0.28);
+}
+.phase_pour {
+  --ringGlow: rgba(120, 190, 255, 0.22);
+}
+.phase_finish {
+  --ringGlow: rgba(180, 180, 180, 0.12);
+}
+
+/* subtil “feel” pr fase */
+.phase_bloom .ring {
+  animation: bloomBreath 2.4s ease-in-out infinite;
+}
+.phase_pour .ring {
+  animation: pourPulse 1.6s ease-in-out infinite;
+}
+.phase_finish .ring {
+  animation: none;
+}
+
+@keyframes bloomBreath {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes pourPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.01);
+  }
+}
