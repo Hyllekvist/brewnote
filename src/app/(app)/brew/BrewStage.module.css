@@ -194,3 +194,54 @@
     margin-bottom: 24px;
   }
 }
+
+@media (min-width: 900px) {
+  .root {
+    padding-top: 104px;
+    padding-bottom: 34px;
+    max-width: 920px;
+  }
+
+  .header {
+    margin-top: 18px;
+  }
+
+  .kicker {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+  }
+
+  .instruction {
+    font-size: 22px;
+    line-height: 1.32;
+    max-width: 760px;
+  }
+
+  .ringWrap {
+    padding: 18px 0 10px;
+  }
+
+  .ring {
+    width: 320px;
+    height: 320px;
+  }
+
+  .center {
+    font-size: 56px;
+  }
+
+  .meta {
+    margin-bottom: 26px;
+    gap: 12px;
+  }
+
+  .metaPill {
+    font-size: 12px;
+    padding: 8px 14px;
+  }
+
+  .hint {
+    margin-top: 8px;
+    font-size: 12px;
+  }
+}
