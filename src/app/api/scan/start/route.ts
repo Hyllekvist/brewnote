@@ -5,6 +5,7 @@ export async function POST(req: Request) {
   const { fileName } = await req.json();
   const supabase = supabaseServer();
 
+
   // kræver auth.uid() i RLS -> her bruger vi service role, så vi sætter user_id via JWT i næste iteration.
   // MVP: hvis du allerede har auth på client, så send userId med (eller brug cookies-based auth).
   // For nu: vi gemmer user_id = null og låser i næste iteration.
