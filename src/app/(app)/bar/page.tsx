@@ -1,17 +1,14 @@
-import styles from "./BarPage.module.css";
-import { BarClient } from "./BarClient";
+import BarClient from "./BarClient";
 
 export const dynamic = "force-dynamic";
 
 export default function BarPage() {
   return (
-    <main className={styles.page}>
-      <header className={styles.header}>
-        <h1 className={styles.h1}>Din Bar</h1>
-        <p className={styles.sub}>
-          Det du har tilføjet — klar til bryg og noter.
-        </p>
-      </header>
+    <main style={{ padding: 16, maxWidth: 720, margin: "0 auto" }}>
+      <h1 style={{ margin: "6px 0 10px" }}>Din Bar</h1>
+      <p style={{ opacity: 0.7, marginTop: 0 }}>
+        Det du har tilføjet — klar til bryg og noter.
+      </p>
 
       <BarClient />
     </main>
