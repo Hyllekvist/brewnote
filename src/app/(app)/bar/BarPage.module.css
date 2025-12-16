@@ -1,0 +1,32 @@
+.page {
+  min-height: 100vh;
+  padding-bottom: 96px; /* plads til evt. sticky nav senere */
+}
+
+.main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 14px 14px 22px;
+}
+
+@media (min-width: 720px) {
+  .main {
+    padding: 18px 16px 28px;
+  }
+}
+
+.header {
+  margin: 8px 0 12px;
+}
+
+.h1 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.p {
+  margin: 6px 0 0;
+  opacity: 0.75;
+}
