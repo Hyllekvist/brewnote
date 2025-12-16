@@ -1,139 +1,149 @@
 /* app/brew/BrewClient.module.css */
 
-/* ---------- Theme fallbacks (works with your existing dark/light toggle) ---------- */
-.page {
-  --bg: var(--bg, #07090c);
-  --ink: var(--ink, rgba(255, 255, 255, 0.92));
+/* ---------- Route-only body lock (ingen scroll) ---------- */
+:global(body) {
+  overflow: hidden;
+}
+
+/* ---------- Theme fallbacks (hvis du ikke har vars globalt) ---------- */
+:global(:root) {
+  --bg: #0b0d10;
+  --ink: rgba(255, 255, 255, 0.92);
   --muted: rgba(255, 255, 255, 0.62);
-  --hair: rgba(255, 255, 255, 0.10);
-  --card: rgba(255, 255, 255, 0.05);
-  --card2: rgba(255, 255, 255, 0.07);
 
-  --accent1: var(--accent1, #ff7a66);
-  --accent2: var(--accent2, #ff5e62);
+  --card: rgba(255, 255, 255, 0.06);
+  --card2: rgba(255, 255, 255, 0.04);
+  --stroke: rgba(255, 255, 255, 0.10);
 
-  --r16: 16px;
-  --r20: 20px;
-  --shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+  --accent1: #ff9966;
+  --accentOk: #35d1b6;
 
+  --r: 26px;
+  --r2: 18px;
+  --shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+}
+
+/* ---------- Page shell (no scroll) ---------- */
+.page {
   min-height: 100dvh;
-  background: radial-gradient(900px 600px at 20% 10%, rgba(255, 122, 102, 0.18), transparent 55%),
-    radial-gradient(900px 600px at 80% 20%, rgba(255, 94, 98, 0.16), transparent 55%),
+  height: 100dvh;
+  overflow: hidden;
+  background: radial-gradient(1200px 800px at 50% 10%, rgba(255, 153, 102, 0.10), transparent 60%),
+    radial-gradient(900px 700px at 20% 80%, rgba(53, 209, 182, 0.08), transparent 55%),
     var(--bg);
   color: var(--ink);
-
-  /* no scroll; everything must fit over fold */
-  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
 /* ---------- Top bar ---------- */
 .topBar {
-  height: 64px;
+  height: 74px;
+  padding: 10px 14px;
   display: grid;
-  grid-template-columns: 52px 1fr 52px;
+  grid-template-columns: 44px 1fr 44px;
   align-items: center;
   gap: 10px;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--hair);
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0));
 }
 
 .iconBtn {
   width: 44px;
   height: 44px;
   border-radius: 14px;
-  border: 1px solid var(--hair);
-  background: rgba(255, 255, 255, 0.04);
+  display: grid;
+  place-items: center;
+
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   color: var(--ink);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   text-decoration: none;
-  font-weight: 650;
-  letter-spacing: 0.01em;
+
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.iconBtn:active {
+  transform: translateY(1px);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .topTitle {
   min-width: 0;
-  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .kicker {
   font-size: 11px;
-  letter-spacing: 0.18em;
-  color: var(--muted);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .h1 {
-  margin-top: 2px;
-  font-size: 16px;
-  line-height: 1.2;
-  font-weight: 750;
+  font-size: 18px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* ---------- Setup wizard ---------- */
-.setupWrap {
+/* ---------- Optional: Prep carousel stage (hvis du har den) ---------- */
+.prepStage {
   flex: 1;
-  display: grid;
-  grid-template-rows: 1fr auto auto;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px 16px;
   gap: 14px;
-  padding: 16px 14px 16px;
+  overflow: hidden;
 }
 
-.setupCard {
-  border: 1px solid var(--hair);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
-  border-radius: 24px;
+.prepCard {
+  flex: 1;
+  min-height: 0;
+  border-radius: var(--r);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
+  border: 1px solid rgba(255, 255, 255, 0.10);
   box-shadow: var(--shadow);
-  padding: 18px 16px 14px;
   display: grid;
-  grid-template-rows: auto auto auto auto auto;
-  gap: 10px;
-  align-content: center;
+  place-items: center;
+  padding: 24px 18px;
   text-align: center;
 }
 
-.setupIcon {
-  display: flex;
-  justify-content: center;
-  opacity: 0.95;
+.prepIcon {
+  width: 86px;
+  height: 86px;
+  border-radius: 28px;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 16px;
 }
 
-.bigIcon {
-  width: 96px;
-  height: 96px;
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.setupTitle {
+.prepTitle {
   font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.02em;
+  margin: 0 0 8px;
 }
 
-.setupBody {
-  color: var(--ink);
-  opacity: 0.9;
-  font-size: 15px;
-  line-height: 1.35;
-}
-
-.setupMeta {
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.3;
+.prepText {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.70);
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 .dots {
-  margin-top: 6px;
   display: flex;
-  gap: 7px;
   justify-content: center;
+  gap: 8px;
+  padding: 6px 0 0;
 }
 
 .dot {
@@ -143,119 +153,119 @@
   background: rgba(255, 255, 255, 0.18);
 }
 
-.dotOn {
-  width: 18px;
-  background: linear-gradient(90deg, var(--accent1), var(--accent2));
+.dotActive {
+  background: rgba(255, 255, 255, 0.70);
 }
 
-.setupActions {
+.prepFooter {
   display: grid;
-  grid-template-columns: 56px 1fr 56px;
-  gap: 10px;
+  grid-template-columns: 52px 1fr 52px;
+  gap: 12px;
   align-items: center;
 }
 
-.pillBtn {
+.navBtn {
+  width: 52px;
   height: 52px;
   border-radius: 18px;
-  border: 1px solid var(--hair);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   color: var(--ink);
-  font-size: 20px;
+  display: grid;
+  place-items: center;
 }
 
-.pillBtn:disabled {
-  opacity: 0.35;
-}
-
-.ctaBtn {
+.primaryCta {
   height: 52px;
-  border-radius: 18px;
+  border-radius: 20px;
   border: 0;
   font-weight: 800;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
+  color: rgba(0, 0, 0, 0.82);
+  background: linear-gradient(135deg, var(--accent1), rgba(255, 94, 98, 0.95));
+  box-shadow: 0 18px 50px rgba(255, 153, 102, 0.18);
 }
 
-.ctaBtnPrimary {
-  background: linear-gradient(90deg, var(--accent1), var(--accent2));
-  color: #121212;
-  box-shadow: 0 10px 30px rgba(255, 94, 98, 0.18);
+.primaryCta:active,
+.navBtn:active {
+  transform: translateY(1px);
 }
 
-.setupFooterHint {
-  text-align: center;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-/* ---------- Brew cockpit (over fold) ---------- */
+/* ---------- Cockpit (brew over fold) ---------- */
 .cockpit {
   flex: 1;
-  display: grid;
-  grid-template-rows: auto 1fr auto auto;
-  gap: 10px;
-  padding: 14px 14px 12px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px 18px;
+  gap: 12px;
+  overflow: hidden;
 }
 
+/* timer + step pill */
 .timerRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
+  padding: 2px 2px 0;
 }
 
 .timer {
   font-size: 44px;
-  font-weight: 350;
-  letter-spacing: 0.02em;
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .stepPill {
   height: 44px;
   padding: 0 12px;
   border-radius: 999px;
-  border: 1px solid var(--hair);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--ink);
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
 }
 
 .pillIdx {
+  font-size: 12px;
   font-weight: 800;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--hair);
-  padding: 4px 10px;
+  color: rgba(255, 255, 255, 0.70);
+  background: rgba(0, 0, 0, 0.20);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  padding: 6px 10px;
   border-radius: 999px;
 }
 
 .pillLabel {
-  font-weight: 750;
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
 .pillChevron {
-  opacity: 0.7;
+  opacity: 0.65;
 }
 
-/* ring + hero card feel */
+/* Ring */
 .ringWrap {
+  flex: 1;
+  min-height: 0;
   display: grid;
   place-items: center;
-  border-radius: 26px;
-  border: 1px solid var(--hair);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
-  box-shadow: var(--shadow);
-  padding: 18px 12px;
 }
 
 .ring {
-  width: min(78vw, 340px);
+  width: min(86vw, 360px);
   aspect-ratio: 1 / 1;
   border-radius: 999px;
-  display: grid;
-  place-items: center;
+  padding: 14px;
   position: relative;
+  box-shadow: var(--shadow);
 }
 
 .ring::before {
@@ -263,175 +273,206 @@
   position: absolute;
   inset: 10px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  opacity: 0.55;
 }
 
 .ringInner {
-  position: relative;
-  width: calc(100% - 26px);
-  height: calc(100% - 26px);
+  width: 100%;
+  height: 100%;
   border-radius: 999px;
+  background: radial-gradient(450px 450px at 50% 45%, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02) 62%),
+    rgba(0, 0, 0, 0.20);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   display: grid;
   place-items: center;
 }
 
 .bigNumber {
   font-size: 56px;
-  font-weight: 900;
-  letter-spacing: -0.02em;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
+/* Instruction */
 .instruction {
   margin: 0;
   text-align: center;
-  font-size: 15px;
-  line-height: 1.3;
-  color: var(--ink);
-  opacity: 0.95;
+  line-height: 1.25;
+  padding: 0 8px;
+  color: rgba(255, 255, 255, 0.90);
+  font-size: 18px;
 }
 
 .subInstruction {
-  color: var(--muted);
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.62);
+  line-height: 1.4;
 }
 
+/* Controls */
 .controls {
   display: grid;
-  grid-template-columns: 56px 1fr 56px;
+  grid-template-columns: 54px 1fr 54px;
   gap: 12px;
   align-items: center;
+  padding-top: 6px;
 }
 
 .btn {
-  height: 52px;
-  border-radius: 18px;
-  border: 1px solid var(--hair);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--ink);
+  height: 54px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.90);
   font-weight: 800;
+  display: grid;
+  place-items: center;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .btn:disabled {
   opacity: 0.35;
 }
 
-.btnPrimary {
-  border: 0;
-  background: linear-gradient(90deg, var(--accent1), var(--accent2));
-  color: #101010;
-  box-shadow: 0 10px 30px rgba(255, 94, 98, 0.18);
+.btn:active {
+  transform: translateY(1px);
 }
 
+.btnPrimary {
+  border: 0;
+  color: rgba(0, 0, 0, 0.82);
+  background: linear-gradient(135deg, var(--accent1), rgba(255, 94, 98, 0.95));
+  box-shadow: 0 18px 50px rgba(255, 153, 102, 0.18);
+}
+
+/* Micro row */
 .microRow {
   display: flex;
   justify-content: space-between;
-  color: var(--muted);
+  gap: 12px;
   font-size: 13px;
-  padding: 0 2px;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 6px 4px 0;
 }
 
-/* ---------- Bottom sheet ---------- */
+/* ---------- Bottom sheet overlay (må ikke skubbe layout) ---------- */
 .sheet {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  transform: translateY(calc(100% - 80px));
+  z-index: 50;
+
+  padding: 10px 14px calc(18px + env(safe-area-inset-bottom));
+  transform: translateY(72%);
   transition: transform 220ms ease;
-  background: rgba(10, 12, 16, 0.82);
-  backdrop-filter: blur(14px);
-  border-top: 1px solid var(--hair);
-  border-top-left-radius: 22px;
-  border-top-right-radius: 22px;
-  padding: 10px 14px 14px;
-  box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
 }
 
 .sheetOpen {
-  transform: translateY(0);
+  transform: translateY(0%);
+  pointer-events: auto;
 }
 
 .sheetHandle {
-  width: 64px;
+  width: 54px;
   height: 6px;
   border-radius: 99px;
-  background: rgba(255, 255, 255, 0.18);
-  margin: 6px auto 10px;
+  background: rgba(255, 255, 255, 0.20);
+  margin: 0 auto 10px;
 }
 
 .stepList {
-  display: grid;
-  gap: 10px;
-  max-height: 52vh;
-  overflow: auto;
-  padding-bottom: 2px;
+  border-radius: var(--r);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: var(--shadow);
+  overflow: hidden;
 }
 
 .stepRow {
-  border: 1px solid var(--hair);
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 18px;
-  padding: 12px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  padding: 14px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: var(--ink);
+  gap: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.stepRow:first-child {
+  border-top: 0;
 }
 
 .stepRowActive {
-  background: linear-gradient(90deg, rgba(255, 122, 102, 0.18), rgba(255, 94, 98, 0.10));
-  border-color: rgba(255, 122, 102, 0.35);
+  background: linear-gradient(90deg, rgba(255, 153, 102, 0.18), rgba(255, 153, 102, 0.06));
 }
 
 .stepLeft {
   display: flex;
-  gap: 10px;
   align-items: center;
+  gap: 12px;
+  min-width: 0;
 }
 
 .bullet {
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  border: 1px solid var(--hair);
-  background: rgba(255, 255, 255, 0.04);
+  width: 30px;
+  height: 30px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
   font-weight: 900;
+  background: rgba(0, 0, 0, 0.20);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .rowTitle {
-  font-weight: 850;
+  font-weight: 900;
+  letter-spacing: -0.01em;
 }
 
 .rowSub {
-  font-size: 12px;
-  color: var(--muted);
   margin-top: 2px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .chev {
-  opacity: 0.7;
-  font-size: 20px;
+  opacity: 0.55;
+  font-size: 18px;
 }
 
-/* ---------- Desktop niceties ---------- */
-@media (min-width: 880px) {
-  .page {
-    overflow: hidden;
-  }
-  .cockpit {
-    max-width: 920px;
-    margin: 0 auto;
-  }
-  .setupWrap {
-    max-width: 720px;
-    margin: 0 auto;
-  }
+/* ---------- Small phones tuning ---------- */
+@media (max-height: 740px) {
   .timer {
-    font-size: 56px;
+    font-size: 40px;
   }
   .bigNumber {
-    font-size: 68px;
+    font-size: 52px;
+  }
+  .instruction {
+    font-size: 17px;
+  }
+  .ring {
+    width: min(84vw, 330px);
+    padding: 12px;
+  }
+}
+
+/* ---------- Very small heights (fallback) ---------- */
+@media (max-height: 680px) {
+  .subInstruction {
+    display: none; /* hold over fold */
+  }
+  .sheet {
+    transform: translateY(78%);
   }
 }
