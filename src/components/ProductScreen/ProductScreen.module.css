@@ -437,3 +437,52 @@
   font-size: 12px;
   opacity: 0.75;
 }
+.latestCard{
+  margin-top: 14px;
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255,255,255,.06);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+}
+
+.latestTop{
+  display:flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.latestTop h3{
+  margin:0;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+.latestMeta{
+  font-size: 12px;
+  opacity: .65;
+}
+
+.latestGrid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+}
+
+.latestLabel{
+  font-size: 11px;
+  opacity: .6;
+}
+
+.latestValue{
+  font-size: 13px;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.latestEmpty{
+  font-size: 13px;
+  opacity: .75;
+  line-height: 1.35;
+}
