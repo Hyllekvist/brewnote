@@ -61,6 +61,12 @@
   font-weight: 900;
 }
 
+.metaLine {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.72;
+}
+
 .select{
   flex: 1;
   height: 38px;
