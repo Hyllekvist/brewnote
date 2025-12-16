@@ -10,11 +10,31 @@ type Extracted = {
   intensity?: number;
   arabica_pct?: number;
   organic?: boolean;
-  ean?: string; // senere hvis du scanner barcode
+  ean?: string; // senere barcode
+};
+
+type Match = {
+  product_id: string;
+  variant_id: string;
+  brand: string;
+  line?: string | null;
+  name: string;
+  size_g?: number | null;
+  form?: string | null;
+  intensity?: number | null;
+  arabica_pct?: number | null;
+  organic?: boolean | null;
+};
+
+type Suggestion = {
+  variant_id: string;
+  label: string;
+  confidence: number;
 };
 
 export async function POST(req: Request) {
   const { sessionId } = await req.json();
+
   if (!sessionId) {
     return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
   }
@@ -33,7 +53,7 @@ export async function POST(req: Request) {
   }
 
   // 2) MOCK extract (v1)
-  // Skift dette ud med rigtig OCR senere.
+  // Skift dette ud med rigtig OCR/vision senere
   const extracted: Extracted = {
     brand: "Lavazza",
     line: "Tierra!",
@@ -42,23 +62,29 @@ export async function POST(req: Request) {
     form: "beans",
     intensity: 6,
     arabica_pct: 100,
-    organic: true
+    organic: true,
   };
 
-  // 3) resolve
-  const resolved = await resolveVariant(supabase, extracted);
+  // 3) resolve + suggestions
+  const { match, suggestions } = await resolveVariantWithSuggestions(
+    supabase,
+    extracted
+  );
 
-  const status = resolved ? "resolved" : "needs_user";
-  const confidence = resolved ? 0.9 : 0.55;
+  const status: "resolved" | "needs_user" | "failed" = match
+    ? "resolved"
+    : "needs_user";
+
+  const confidence = match ? 0.9 : suggestions.length ? 0.55 : 0.35;
 
   // 4) persist
   const { error: upErr } = await supabase
     .from("scan_sessions")
     .update({
       extracted,
-      resolved_variant_id: resolved?.variant_id ?? null,
+      resolved_variant_id: match?.variant_id ?? null,
       resolution_confidence: confidence,
-      status
+      status,
     })
     .eq("id", sessionId);
 
@@ -71,17 +97,22 @@ export async function POST(req: Request) {
     sessionId,
     confidence,
     extracted,
-    match: resolved ?? null,
-    suggestions: resolved ? [] : []
+    match: match ?? null,
+    suggestions,
   });
 }
 
-async function resolveVariant(supabase: any, ex: Extracted) {
+async function resolveVariantWithSuggestions(supabase: any, ex: Extracted): Promise<{
+  match: Match | null;
+  suggestions: Suggestion[];
+}> {
   // A) barcode match (hvis vi får ean senere)
   if (ex.ean) {
     const { data: rows } = await supabase
       .from("product_barcodes")
-      .select("variant_id, product_variants(id, size_g, form, intensity, arabica_pct, organic, products(id, brand, line, name))")
+      .select(
+        "variant_id, product_variants(id, size_g, form, intensity, arabica_pct, organic, products(id, brand, line, name))"
+      )
       .eq("ean", ex.ean)
       .limit(1);
 
@@ -89,60 +120,109 @@ async function resolveVariant(supabase: any, ex: Extracted) {
     if (hit?.product_variants?.products) {
       const p = hit.product_variants.products;
       const v = hit.product_variants;
+
       return {
-        product_id: p.id,
-        variant_id: v.id,
-        brand: p.brand,
-        line: p.line,
-        name: p.name,
-        size_g: v.size_g,
-        form: v.form,
-        intensity: v.intensity,
-        arabica_pct: v.arabica_pct,
-        organic: v.organic
+        match: {
+          product_id: p.id,
+          variant_id: v.id,
+          brand: p.brand,
+          line: p.line,
+          name: p.name,
+          size_g: v.size_g,
+          form: v.form,
+          intensity: v.intensity,
+          arabica_pct: v.arabica_pct,
+          organic: v.organic,
+        },
+        suggestions: [],
       };
     }
   }
 
-  // B) fuzzy på product (brand + name)
+  // B) fuzzy product match (brand + name + line)
   const brandQ = ex.brand ? `%${ex.brand}%` : "%";
   const nameQ = ex.name ? `%${ex.name}%` : "%";
+  const lineQ = ex.line ? `%${ex.line}%` : "%";
 
   const { data: products } = await supabase
     .from("products")
     .select("id, brand, line, name")
     .ilike("brand", brandQ)
     .ilike("name", nameQ)
-    .limit(5);
+    .ilike("line", lineQ)
+    .limit(10);
 
-  if (!products?.length) return null;
+  if (!products?.length) {
+    // fallback: vis top produkter som “hjælp”
+    const { data: ps } = await supabase
+      .from("products")
+      .select("id, brand, line, name")
+      .limit(5);
 
-  // C) vælg første product (MVP)
+    const suggestions: Suggestion[] = (ps ?? []).map((p: any) => ({
+      variant_id: "",
+      label: `${p.brand} ${p.line ? p.line + " " : ""}${p.name}`,
+      confidence: 0.25,
+    }));
+
+    return { match: null, suggestions };
+  }
+
+  // MVP: vælg bedste første hit
   const p = products[0];
 
-  // D) find variant der matcher size/form bedst
+  // C) find varianter
   const { data: variants } = await supabase
     .from("product_variants")
     .select("id, size_g, form, intensity, arabica_pct, organic")
     .eq("product_id", p.id)
     .limit(25);
 
-  if (!variants?.length) return null;
+  if (!variants?.length) {
+    // hvis product findes men ingen varianter -> needs_user
+    return {
+      match: null,
+      suggestions: [
+        {
+          variant_id: "",
+          label: `${p.brand} ${p.line ? p.line + " " : ""}${p.name} (ingen varianter i DB)`,
+          confidence: 0.3,
+        },
+      ],
+    };
+  }
 
-  const best =
-    variants.find((v: any) => (ex.size_g ? v.size_g === ex.size_g : true) && (ex.form ? v.form === ex.form : true)) ??
-    variants[0];
+  // D) exact variant match på size + form (hvis angivet)
+  const exact = variants.find((v: any) => {
+    const sizeOk = ex.size_g ? v.size_g === ex.size_g : true;
+    const formOk = ex.form ? v.form === ex.form : true;
+    return sizeOk && formOk;
+  });
+
+  if (!exact) {
+    // returnér varianter som forslag
+    const suggestions: Suggestion[] = variants.slice(0, 5).map((v: any) => ({
+      variant_id: v.id,
+      label: `${p.brand} ${p.line ? p.line + " " : ""}${p.name} — ${v.size_g ?? "?"}g ${v.form ?? ""}`.trim(),
+      confidence: 0.55,
+    }));
+
+    return { match: null, suggestions };
+  }
 
   return {
-    product_id: p.id,
-    variant_id: best.id,
-    brand: p.brand,
-    line: p.line,
-    name: p.name,
-    size_g: best.size_g,
-    form: best.form,
-    intensity: best.intensity,
-    arabica_pct: best.arabica_pct,
-    organic: best.organic
+    match: {
+      product_id: p.id,
+      variant_id: exact.id,
+      brand: p.brand,
+      line: p.line,
+      name: p.name,
+      size_g: exact.size_g,
+      form: exact.form,
+      intensity: exact.intensity,
+      arabica_pct: exact.arabica_pct,
+      organic: exact.organic,
+    },
+    suggestions: [],
   };
 }
