@@ -43,6 +43,33 @@ type ProcessResult = {
   suggestions?: Suggestion[];
 };
 
+type VariantDetail = {
+  variant: {
+    id: string;
+    product_id: string;
+    size_g?: number | null;
+    form?: string | null;
+    intensity?: number | null;
+    arabica_pct?: number | null;
+    organic?: boolean | null;
+  };
+  product: {
+    id: string;
+    brand: string;
+    line?: string | null;
+    name: string;
+  };
+  origin: any | null;
+  dna: any | null;
+  brew: {
+    method: string;
+    grind: string;
+    ratio: string;
+    temp_c: number;
+    notes?: string;
+  };
+};
+
 function safeJson(text: string) {
   try {
     return JSON.parse(text);
@@ -57,6 +84,9 @@ export default function ScanClient() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ProcessResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
+
+  const [detail, setDetail] = useState<VariantDetail | null>(null);
+  const [savedMsg, setSavedMsg] = useState<string | null>(null);
 
   // Manual extracted editor (MVP)
   const [edit, setEdit] = useState<Extracted>({
@@ -85,9 +115,21 @@ export default function ScanClient() {
     });
   }
 
+  async function loadDetails(variantId: string) {
+    setDetail(null);
+    const res = await fetch(`/api/products/variant/${variantId}`, { method: "GET" });
+    const text = await res.text();
+    const j = safeJson(text);
+
+    if (!res.ok) throw new Error(`detail ${res.status}: ${j?.error ?? text}`);
+    setDetail(j as VariantDetail);
+  }
+
   async function onScan() {
     setErr(null);
+    setSavedMsg(null);
     setResult(null);
+    setDetail(null);
     if (!file) return;
 
     setBusy(true);
@@ -138,44 +180,10 @@ export default function ScanClient() {
       const data: ProcessResult = await procRes.json();
       setResult(data);
       loadEditFromResult(data);
-    } catch (e: any) {
-      setErr(e?.message ?? "Noget gik galt");
-    } finally {
-      setBusy(false);
-    }
-  }
 
-  async function onResolve(variantId: string) {
-    if (!result?.sessionId) return;
-
-    setErr(null);
-    setBusy(true);
-
-    try {
-      const res = await fetch("/api/scan/resolve", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          sessionId: result.sessionId,
-          variantId,
-        }),
-      });
-
-      if (!res.ok) {
-        const text = await res.text();
-        const j = safeJson(text);
-        throw new Error(`resolve ${res.status}: ${j?.error ?? text}`);
+      if (data.status === "resolved" && data.match?.variant_id) {
+        await loadDetails(data.match.variant_id);
       }
-
-      const data = await res.json();
-
-      setResult((prev) => ({
-        ...(prev ?? ({} as any)),
-        status: "resolved",
-        confidence: data.confidence ?? 0.9,
-        match: data.match ?? null,
-        suggestions: [],
-      }));
     } catch (e: any) {
       setErr(e?.message ?? "Noget gik galt");
     } finally {
@@ -216,13 +224,12 @@ export default function ScanClient() {
     if (!result?.sessionId) return;
 
     setErr(null);
+    setSavedMsg(null);
     setBusy(true);
 
     try {
-      // 1) save extracted
       await saveExtracted();
 
-      // 2) run process again (now it should use session.extracted)
       const procRes = await fetch("/api/scan/process", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -238,6 +245,12 @@ export default function ScanClient() {
       const data: ProcessResult = await procRes.json();
       setResult(data);
       loadEditFromResult(data);
+
+      if (data.status === "resolved" && data.match?.variant_id) {
+        await loadDetails(data.match.variant_id);
+      } else {
+        setDetail(null);
+      }
     } catch (e: any) {
       setErr(e?.message ?? "Noget gik galt");
     } finally {
@@ -249,13 +262,12 @@ export default function ScanClient() {
     if (!result?.sessionId) return;
 
     setErr(null);
+    setSavedMsg(null);
     setBusy(true);
 
     try {
-      // 1) GEM edit -> session.extracted (ellers bruger create-route gammel extracted)
       await saveExtracted();
 
-      // 2) create product from extracted
       const res = await fetch("/api/scan/create-product-from-extracted", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -265,15 +277,8 @@ export default function ScanClient() {
       const text = await res.text();
       const j = safeJson(text);
 
-      console.log("create-product status:", res.status);
-      console.log("create-product raw:", text);
-      console.log("create-product json:", j);
+      if (!res.ok) throw new Error(`create-product ${res.status}: ${j?.error ?? text}`);
 
-      if (!res.ok) {
-        throw new Error(`create-product ${res.status}: ${j?.error ?? text}`);
-      }
-
-      // forventer { status, confidence, match, extracted? }
       setResult((prev) => ({
         ...(prev ?? ({} as any)),
         status: "resolved",
@@ -283,8 +288,36 @@ export default function ScanClient() {
         extracted: j?.extracted ?? (prev?.extracted ?? {}),
       }));
 
-      // valgfrit: opdatér editor til det vi lige har gemt
-      // (ellers står den allerede rigtigt)
+      if (j?.match?.variant_id) {
+        await loadDetails(j.match.variant_id);
+      }
+    } catch (e: any) {
+      setErr(e?.message ?? "Noget gik galt");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onSaveToInventory() {
+    const variantId = detail?.variant?.id || result?.match?.variant_id;
+    if (!variantId) return;
+
+    setErr(null);
+    setSavedMsg(null);
+    setBusy(true);
+
+    try {
+      const res = await fetch("/api/inventory/add", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ variantId }),
+      });
+
+      const text = await res.text();
+      const j = safeJson(text);
+
+      if (!res.ok) throw new Error(`inventory ${res.status}: ${j?.error ?? text}`);
+      setSavedMsg("Gemt i inventory ✅");
     } catch (e: any) {
       setErr(e?.message ?? "Noget gik galt");
     } finally {
@@ -293,7 +326,7 @@ export default function ScanClient() {
   }
 
   return (
-    <div style={{ maxWidth: 820, margin: "0 auto", padding: 16 }}>
+    <div style={{ maxWidth: 920, margin: "0 auto", padding: 16 }}>
       <h1 style={{ marginBottom: 12 }}>Scan kaffe/te</h1>
 
       <input
@@ -315,6 +348,10 @@ export default function ScanClient() {
         </p>
       )}
 
+      {savedMsg && (
+        <p style={{ marginTop: 12, color: "limegreen" }}>{savedMsg}</p>
+      )}
+
       {result && (
         <div
           style={{
@@ -329,7 +366,6 @@ export default function ScanClient() {
             <b>{Math.round(result.confidence * 100)}%</b>
           </div>
 
-          {/* Result */}
           {result.match && (
             <>
               <h3 style={{ marginTop: 10 }}>
@@ -346,30 +382,48 @@ export default function ScanClient() {
             </>
           )}
 
-          {result.status === "needs_user" && (
-            <>
-              <p style={{ marginTop: 10, marginBottom: 8 }}>
-                Ingen sikker match. Vælg et forslag — eller ret info og prøv igen:
-              </p>
+          {/* Detail card */}
+          {detail && (
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #222" }}>
+              <div style={{ fontWeight: 700, marginBottom: 8 }}>Produkt-info</div>
 
-              {(result.suggestions ?? []).length > 0 && (
-                <ul style={{ margin: "0 0 12px", paddingLeft: 18 }}>
-                  {(result.suggestions ?? []).map((s) => (
-                    <li key={s.variant_id || s.label} style={{ marginBottom: 8 }}>
-                      {s.variant_id ? (
-                        <button onClick={() => onResolve(s.variant_id)} disabled={busy}>
-                          Vælg: {s.label} ({Math.round(s.confidence * 100)}%)
-                        </button>
-                      ) : (
-                        <span>
-                          {s.label} ({Math.round(s.confidence * 100)}%)
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
+              <div style={{ display: "grid", gap: 8 }}>
+                <div>
+                  <div style={{ fontSize: 12, opacity: 0.75 }}>Origin</div>
+                  <div style={{ opacity: 0.95 }}>
+                    {detail.origin
+                      ? JSON.stringify(detail.origin)
+                      : "— (ingen origin endnu)"}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 12, opacity: 0.75 }}>DNA</div>
+                  <div style={{ opacity: 0.95 }}>
+                    {detail.dna ? JSON.stringify(detail.dna) : "— (ingen dna endnu)"}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 12, opacity: 0.75 }}>Anbefalet bryg</div>
+                  <div style={{ opacity: 0.95 }}>
+                    <b>{detail.brew.method}</b> · Grind: {detail.brew.grind} · Ratio:{" "}
+                    {detail.brew.ratio} · Temp: {detail.brew.temp_c}°C
+                    {detail.brew.notes ? (
+                      <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>
+                        {detail.brew.notes}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 10 }}>
+                <button onClick={onSaveToInventory} disabled={busy}>
+                  {busy ? "Gemmer..." : "Gem i inventory"}
+                </button>
+              </div>
+            </div>
           )}
 
           {/* Manual edit extracted */}
