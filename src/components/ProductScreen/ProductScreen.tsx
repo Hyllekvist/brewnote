@@ -233,6 +233,7 @@ export default function ProductScreen({
       }
 
       setAdded(true);
+      window.dispatchEvent(new Event("brewnote_bar_changed"));
     } catch (e: any) {
       setAddError(e?.message || "Kunne ikke tilføje til Bar");
     } finally {
