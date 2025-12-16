@@ -237,39 +237,45 @@ export default function ScanClient() {
   }
 
   // ✅ A: Create product + variant from extracted (crowd DB)
-  async function onCreateFromExtracted() {
-    if (!result?.sessionId) return;
+async function onCreateFromExtracted() {
+  if (!result?.sessionId) return;
 
-    setErr(null);
-    setBusy(true);
-    try {
-      const res = await fetch("/api/scan/create-product-from-extracted", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ sessionId: result.sessionId }),
-      });
+  setErr(null);
+  setBusy(true);
 
-      if (!res.ok) {
-        const text = await res.text();
-        const j = safeJson(text);
-        throw new Error(`create-product ${res.status}: ${j?.error ?? text}`);
-      }
+  try {
+    const res = await fetch("/api/scan/create-product-from-extracted", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sessionId: result.sessionId }),
+    });
 
-      const data = await res.json();
+    const text = await res.text();
+    const j = safeJson(text);
 
-      setResult((prev) => ({
-        ...(prev ?? ({} as any)),
-        status: "resolved",
-        confidence: data.confidence ?? 0.92,
-        match: data.match ?? null,
-        suggestions: [],
-      }));
-    } catch (e: any) {
-      setErr(e?.message ?? "Noget gik galt");
-    } finally {
-      setBusy(false);
+    console.log("create-product status:", res.status);
+    console.log("create-product raw:", text);
+    console.log("create-product json:", j);
+
+    if (!res.ok) {
+      throw new Error(`create-product ${res.status}: ${j?.error ?? text}`);
     }
+
+    // forventer { status, confidence, match }
+    setResult((prev) => ({
+      ...(prev ?? ({} as any)),
+      status: "resolved",
+      confidence: j?.confidence ?? 0.92,
+      match: j?.match ?? null,
+      suggestions: [],
+    }));
+  } catch (e: any) {
+    setErr(e?.message ?? "Noget gik galt");
+  } finally {
+    setBusy(false);
   }
+}
+
 
   const hasMinForCreate =
     (edit.brand?.trim() ?? "").length > 0 && (edit.name?.trim() ?? "").length > 0;
