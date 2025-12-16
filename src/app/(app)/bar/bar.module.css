@@ -1,5 +1,0 @@
-.wrap{max-width:860px}
-.h1{margin:0;font-size:28px;letter-spacing:-0.03em}
-.p{margin-top:8px;color:var(--muted);line-height:1.5}
-.grid{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media (max-width:900px){.grid{grid-template-columns:1fr}}
