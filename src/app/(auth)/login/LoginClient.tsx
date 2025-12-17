@@ -25,14 +25,18 @@ export default function LoginClient() {
     setBusy(true);
 
     try {
-      const redirectTo = `${SITE_URL}/auth/callback?next=${encodeURIComponent(next)}`;
+      const redirectTo = `${SITE_URL}/callback?next=${encodeURIComponent(next)}`;
 
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: redirectTo },
+        options: {
+          emailRedirectTo: redirectTo,
+          shouldCreateUser: true, // ok at have eksplicit
+        },
       });
 
       if (error) throw new Error(error.message);
+
       setMsg("Tjek din email for login-link ✅");
     } catch (e: any) {
       setErr(e?.message ?? "Noget gik galt");
@@ -51,6 +55,7 @@ export default function LoginClient() {
         onChange={(e) => setEmail(e.target.value)}
         placeholder="din@email.dk"
         inputMode="email"
+        autoComplete="email"
         style={{ width: "100%", padding: 12, borderRadius: 12, marginTop: 10 }}
       />
 
