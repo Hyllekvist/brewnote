@@ -1,4 +1,4 @@
-/* BrewmasterInsight.module.css (V8 - theme-safe) */
+/* src/app/scan/BrewmasterInsight.module.css */
 
 .wrap {
   border-radius: var(--radius-lg);
@@ -26,7 +26,7 @@
 
 .title {
   font-size: 18px;
-  font-weight: 850;
+  font-weight: 900;
   letter-spacing: -0.01em;
   color: var(--text);
 }
@@ -42,12 +42,8 @@
 
 .dot { opacity: 0.5; }
 
-.refresh {
-  color: var(--link);
-  font-weight: 750;
-}
+.refresh { color: var(--link); font-weight: 800; }
 
-/* Summary card */
 .summary {
   margin-top: 12px;
   padding: 12px;
@@ -60,7 +56,7 @@
 
 .kicker {
   font-size: 12px;
-  color: var(--muted2);
+  color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -69,13 +65,12 @@
 
 .lineMuted { font-size: 13px; color: var(--muted); }
 
-/* “Aha” highlight — accent baseret, theme-safe */
 .aha {
   margin-top: 10px;
   padding: 12px;
   border-radius: var(--radius-md);
-  background: hsl(var(--accent-h) 55% 55% / .12);
-  border: 1px solid hsl(var(--accent-h) 55% 55% / .22);
+  background: color-mix(in oklab, hsl(155 65% 45%) 18%, transparent);
+  border: 1px solid color-mix(in oklab, hsl(155 65% 45%) 28%, var(--border2));
 }
 
 .ahaLine { font-size: 14px; color: var(--text); }
