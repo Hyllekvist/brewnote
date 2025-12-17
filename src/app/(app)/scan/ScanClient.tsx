@@ -56,6 +56,8 @@ type VariantDetail = {
   brew: { method: string; grind: string; ratio: string; temp_c: number; notes?: string };
 };
 
+type Stage = "idle" | "ready" | "scanning" | "done";
+
 function safeJson(text: string) {
   try {
     return JSON.parse(text);
@@ -63,9 +65,8 @@ function safeJson(text: string) {
     return null;
   }
 }
-const pct = (n: number) => `${Math.round((n ?? 0) * 100)}%`;
 
-type Stage = "idle" | "ready" | "scanning" | "done";
+const pct = (n: number) => `${Math.round((n ?? 0) * 100)}%`;
 
 export default function ScanClient() {
   const supabase = useMemo(() => supabaseBrowser(), []);
@@ -95,7 +96,7 @@ export default function ScanClient() {
 
   const resultRef = useRef<HTMLDivElement | null>(null);
 
-  // cleanup preview URL
+  // revoke previous previewUrl on change/unmount
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -136,7 +137,7 @@ export default function ScanClient() {
     setFile(f);
     setStage(f ? "ready" : "idle");
 
-    // nyt billede = reset flow
+    // reset scan output
     setResult(null);
     setDetail(null);
     setEditOpen(false);
@@ -197,14 +198,15 @@ export default function ScanClient() {
 
       if (data.status === "resolved" && data.match?.variant_id) {
         await loadDetails(data.match.variant_id);
+      } else {
+        setDetail(null);
       }
 
       setStage("done");
 
-      // scroll til resultat (lille delay så DOM er der)
       setTimeout(() => {
         resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 120);
+      }, 140);
     } catch (e: any) {
       setErr(e?.message ?? "Noget gik galt");
       setStage(file ? "ready" : "idle");
@@ -270,7 +272,7 @@ export default function ScanClient() {
 
       setTimeout(() => {
         resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 120);
+      }, 140);
     } catch (e: any) {
       setErr(e?.message ?? "Noget gik galt");
     } finally {
@@ -311,7 +313,7 @@ export default function ScanClient() {
 
       setTimeout(() => {
         resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 120);
+      }, 140);
     } catch (e: any) {
       setErr(e?.message ?? "Noget gik galt");
     } finally {
@@ -354,157 +356,94 @@ export default function ScanClient() {
   const isResolved = result?.status === "resolved";
   const canSaveInventory = isResolved && (detail?.variant?.id || result?.match?.variant_id);
 
-  // Sticky CTA: vis kun når det giver mening
   const showSticky = stage !== "idle" && !!file;
-  const stickyLabel = stage === "scanning" ? "Scanner…" : stage === "done" ? "Scan igen" : "Scan";
+  const stickyLabel = stage === "scanning" ? "Scanner…" : "Scan";
   const stickyDisabled = !file || busy;
-
-  function onStickyClick() {
-    if (!file) return;
-    onScan();
-  }
 
   const bm = useMemo(() => {
     const m = result?.match;
     const brew = detail?.brew;
 
     const tips: string[] = [];
+
     if (m?.intensity != null) {
       if (m.intensity >= 8)
-        tips.push(
-          "Høj intensitet → ofte mere bitter/kraftig. Hvis den bliver harsh: prøv grovere grind eller 1–2°C lavere temp."
-        );
+        tips.push("Høj intensitet → hvis den bliver harsh: grovere grind eller 1–2°C lavere vandtemp.");
       else if (m.intensity <= 4)
-        tips.push(
-          "Lav intensitet → mere mild kop. Hvis du savner punch: prøv finere grind eller lidt lavere ratio (mere kaffe)."
-        );
-      else tips.push("Mellem intensitet → god all-round. Små grind-justeringer giver tydelige ændringer.");
+        tips.push("Lav intensitet → hvis du savner punch: lidt finere grind eller højere dose.");
+      else tips.push("Mellem intensitet → små grind-justeringer er din bedste kontrolknap.");
     }
 
     if (m?.arabica_pct != null) {
-      if (m.arabica_pct >= 90)
-        tips.push("Høj Arabica-andel → typisk mere sødme/aroma og mindre ‘kant’ end blends med robusta.");
-      else tips.push("Arabica under 90% → forvent mere ‘bite’ og en mere ‘koffein-følelse’ (ofte robusta i mixet).");
+      if (m.arabica_pct >= 90) tips.push("Høj Arabica → ofte mere aroma/sødme og mindre ‘kant’.");
+      else tips.push("Mere blend/robusta → typisk mere bite/crema og hårdere koffein-følelse.");
     }
 
-    if (m?.form) {
-      if (m.form === "beans") tips.push("Hele bønner: kværn lige før bryg for markant bedre aroma og klarhed.");
-      if (m.form === "ground") tips.push("Formalet kaffe: opbevar lufttæt/mørkt. Smag falder hurtigere efter åbning.");
-    }
+    if (m?.form === "beans") tips.push("Hele bønner: kværn lige før bryg for markant bedre aroma.");
+    if (m?.form === "ground") tips.push("Formalet: opbevar lufttæt og mørkt — smagen falder hurtigere efter åbning.");
 
-    if (brew?.method)
-      tips.push(
-        `Brewmaster anbefaler: ${brew.method} · Grind: ${brew.grind} · Ratio: ${brew.ratio} · Temp: ${brew.temp_c}°C`
-      );
+    const brewLine = brew?.method
+      ? `${brew.method} · Grind: ${brew.grind} · Ratio: ${brew.ratio} · Temp: ${brew.temp_c}°C`
+      : null;
 
     const missing: string[] = [];
     if (!detail?.origin) missing.push("origin");
     if (!detail?.dna) missing.push("smags-DNA");
     const missingText = missing.length
-      ? `Mangler: ${missing.join(" + ")} (vi kan lære det over tid når flere scanner/bedømmer).`
+      ? `Mangler: ${missing.join(" + ")} (vi lærer det over tid når flere scanner/bedømmer).`
       : null;
 
-    return { tips, missingText };
+    return { tips, brewLine, missingText };
   }, [result, detail]);
 
   return (
     <div className={styles.page}>
-      <header className={styles.hero}>
-        <h1 className={styles.h1}>Scan kaffe/te</h1>
-        <p className={styles.sub}>Scan posen → match produkt → gem</p>
-      </header>
-
-      {/* Scan card: stor før scan, kompakt efter scan */}
-      {stage !== "done" ? (
-        <section className={`${styles.card} ${styles.scanCard} ${busy ? styles.scanning : ""}`}>
-          <div className={styles.scanTop}>
-            <div className={styles.scanBadge}>AI Scan</div>
-            <div className={styles.scanTitle}>Peg kameraet mod posen</div>
-            <div className={styles.scanHint}>Godt lys. Skarp front. Ingen glare.</div>
+      {/* Scan card */}
+      <section className={`${styles.card} ${styles.scanCard} ${busy ? styles.scanning : ""}`}>
+        <div className={styles.scanTop}>
+          <div className={styles.scanBadge}>{stage === "done" ? "Klar" : "AI Scan"}</div>
+          <div className={styles.scanTitle}>
+            {stage === "done" ? "Billede valgt" : "Peg kameraet mod posen"}
           </div>
+          <div className={styles.scanHint}>
+            {stage === "done" ? "Se resultat nedenfor — eller scan igen." : "Godt lys. Skarp front. Ingen glare."}
+          </div>
+        </div>
 
-          <div className={styles.scanFrame}>
+        <div className={styles.scanFrame}>
+          {previewUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={previewUrl} alt="Preview" className={styles.previewImg} />
+          ) : (
             <div className={styles.frameIcon} aria-hidden="true">
               ⌁
             </div>
-            {busy && <div className={styles.scanSweep} aria-hidden="true" />}
-          </div>
-
-          <div className={styles.controls}>
-            <label className={styles.fileBtn}>
-              {file ? "Skift billede" : "Vælg billede"}
-              <input
-                className={styles.fileInput}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
-              />
-            </label>
-
-            <div className={styles.fileMeta}>
-              <div className={styles.fileName}>{file ? file.name : "Ingen fil valgt"}</div>
-              <div className={styles.fileSub}>JPG/PNG · Mobilkamera anbefales</div>
-            </div>
-          </div>
-
-          <button className={styles.primaryBtn} onClick={onScan} disabled={!file || busy}>
-            {busy ? "Scanner…" : "Scan"}
-          </button>
-        </section>
-      ) : (
-        <section className={`${styles.card} ${styles.scanCard}`}>
-          <div className={styles.scanTop}>
-            <div className={styles.scanBadge}>Klar</div>
-            <div className={styles.scanTitle}>Billede valgt</div>
-            <div className={styles.scanHint}>Du kan scanne igen eller skifte billede.</div>
-          </div>
-
-          {previewUrl ? (
-            <div className={styles.scanFrame} style={{ padding: 0 }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={previewUrl}
-                alt="Preview"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  borderRadius: 16,
-                }}
-              />
-            </div>
-          ) : (
-            <div className={styles.scanFrame}>
-              <div className={styles.frameIcon} aria-hidden="true">
-                ⌁
-              </div>
-            </div>
           )}
+          {busy && <div className={styles.scanSweep} aria-hidden="true" />}
+        </div>
 
-          <div className={styles.controls}>
-            <label className={styles.fileBtn}>
-              Skift billede
-              <input
-                className={styles.fileInput}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
-              />
-            </label>
+        <div className={styles.controls}>
+          <label className={styles.fileBtn}>
+            {file ? "Skift billede" : "Vælg billede"}
+            <input
+              className={styles.fileInput}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
+            />
+          </label>
 
-            <div className={styles.fileMeta}>
-              <div className={styles.fileName}>{file ? file.name : "Ingen fil valgt"}</div>
-              <div className={styles.fileSub}>Tip: front af posen, god belysning.</div>
-            </div>
+          <div className={styles.fileMeta}>
+            <div className={styles.fileName}>{file ? file.name : "Ingen fil valgt"}</div>
+            <div className={styles.fileSub}>JPG/PNG · Mobilkamera anbefales</div>
           </div>
+        </div>
 
-          <button className={styles.primaryBtn} onClick={onScan} disabled={!file || busy}>
-            {busy ? "Scanner…" : "Scan igen"}
-          </button>
-        </section>
-      )}
+        <button className={styles.primaryBtn} onClick={onScan} disabled={!file || busy}>
+          {busy ? "Scanner…" : "Scan"}
+        </button>
+      </section>
 
       {(err || savedMsg) && (
         <div className={styles.noticeWrap}>
@@ -514,81 +453,142 @@ export default function ScanClient() {
       )}
 
       {result && (
-        <div ref={resultRef}>
+        <div ref={resultRef} className={styles.resultsWrap}>
           <div className={styles.pillsRow}>
-            <div className={styles.pillStrong}>Scan færdig · {pct(confidence)}</div>
+            <div className={styles.pillStrong}>Scan · {pct(confidence)}</div>
             <div className={styles.pillSoft}>
-              {result.status === "resolved" ? "Resolved" : result.status === "needs_user" ? "Needs input" : "Failed"} ·{" "}
-              {pct(confidence)}
+              {result.status === "resolved"
+                ? "Match fundet"
+                : result.status === "needs_user"
+                ? "Kræver input"
+                : "Fejlede"}{" "}
+              · {pct(confidence)}
             </div>
           </div>
 
-          {result.match && (
-            <section className={styles.card}>
-              <div className={styles.productTitle}>
-                {result.match.brand} {result.match.line ? `${result.match.line} ` : ""}
-                {result.match.name}
-              </div>
+          {/* Card 1: What it is */}
+          <section className={styles.card}>
+            <div className={styles.sectionKicker}>What it is</div>
 
-              <div className={styles.metaGrid}>
-                {result.match.size_g != null && (
-                  <div className={styles.metaItem}>
-                    <span>Størrelse</span>
-                    <b>{result.match.size_g}g</b>
-                  </div>
-                )}
-                {result.match.form && (
-                  <div className={styles.metaItem}>
-                    <span>Form</span>
-                    <b>{result.match.form}</b>
-                  </div>
-                )}
-                {result.match.intensity != null && (
-                  <div className={styles.metaItem}>
-                    <span>Intensitet</span>
-                    <b>{result.match.intensity}/10</b>
-                  </div>
-                )}
-                {result.match.arabica_pct != null && (
-                  <div className={styles.metaItem}>
-                    <span>Arabica</span>
-                    <b>{result.match.arabica_pct}%</b>
-                  </div>
-                )}
-                {result.match.organic != null && (
-                  <div className={styles.metaItem}>
-                    <span>Organic</span>
-                    <b>{result.match.organic ? "Ja" : "Nej"}</b>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          {detail && (
-            <section className={styles.card}>
-              <div className={styles.sectionTitle}>Brewmaster notes</div>
-
-              {bm.tips.map((t, i) => (
-                <div key={i} className={styles.infoRow}>
-                  <div className={styles.infoLabel}>Tip</div>
-                  <div className={styles.infoValue}>{t}</div>
+            {result.match ? (
+              <>
+                <div className={styles.productTitle}>
+                  {result.match.brand} {result.match.line ? `${result.match.line} ` : ""}
+                  {result.match.name}
                 </div>
-              ))}
 
-              {bm.missingText && (
-                <div className={styles.infoRow}>
-                  <div className={styles.infoLabel}>Data</div>
-                  <div className={styles.infoValue}>{bm.missingText}</div>
+                <div className={styles.metaGrid}>
+                  {result.match.size_g != null && (
+                    <div className={styles.metaItem}>
+                      <span>Størrelse</span>
+                      <b>{result.match.size_g}g</b>
+                    </div>
+                  )}
+                  {result.match.form && (
+                    <div className={styles.metaItem}>
+                      <span>Form</span>
+                      <b>{result.match.form}</b>
+                    </div>
+                  )}
+                  {result.match.intensity != null && (
+                    <div className={styles.metaItem}>
+                      <span>Intensitet</span>
+                      <b>{result.match.intensity}/10</b>
+                    </div>
+                  )}
+                  {result.match.arabica_pct != null && (
+                    <div className={styles.metaItem}>
+                      <span>Arabica</span>
+                      <b>{result.match.arabica_pct}%</b>
+                    </div>
+                  )}
+                  {result.match.organic != null && (
+                    <div className={styles.metaItem}>
+                      <span>Organic</span>
+                      <b>{result.match.organic ? "Ja" : "Nej"}</b>
+                    </div>
+                  )}
                 </div>
-              )}
+              </>
+            ) : (
+              <>
+                <div className={styles.emptyTitle}>Ingen sikker match endnu</div>
+                <div className={styles.emptyText}>
+                  Ret info nedenfor og prøv igen — eller opret som nyt produkt.
+                </div>
 
+                {(result.suggestions ?? []).length > 0 ? (
+                  <div className={styles.suggestions}>
+                    <div className={styles.suggestionsTitle}>Mulige forslag</div>
+                    <ul className={styles.suggestionsList}>
+                      {(result.suggestions ?? []).slice(0, 6).map((s) => (
+                        <li key={s.variant_id || s.label} className={styles.suggestionItem}>
+                          <span>{s.label}</span>
+                          <span className={styles.suggestionPct}>{Math.round(s.confidence * 100)}%</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </>
+            )}
+          </section>
+
+          {/* Card 2: How to brew */}
+          <section className={styles.card}>
+            <div className={styles.sectionKicker}>How to brew</div>
+
+            {detail?.brew ? (
+              <>
+                <div className={styles.brewLine}>
+                  <b>{detail.brew.method}</b>
+                  <span className={styles.brewDot}>·</span> Grind: {detail.brew.grind}
+                  <span className={styles.brewDot}>·</span> Ratio: {detail.brew.ratio}
+                  <span className={styles.brewDot}>·</span> Temp: {detail.brew.temp_c}°C
+                </div>
+                {detail.brew.notes ? <div className={styles.brewNotes}>{detail.brew.notes}</div> : null}
+              </>
+            ) : (
+              <div className={styles.emptyText}>Ingen bryg-anbefaling endnu for denne variant.</div>
+            )}
+
+            {bm.tips.length ? (
+              <ul className={styles.tips}>
+                {bm.tips.slice(0, 3).map((t) => (
+                  <li key={t}>{t}</li>
+                ))}
+              </ul>
+            ) : null}
+          </section>
+
+          {/* Card 3: Insights */}
+          <section className={styles.card}>
+            <div className={styles.sectionKicker}>Insights</div>
+
+            <div className={styles.infoRow}>
+              <div className={styles.infoLabel}>Origin</div>
+              <div className={styles.infoValue}>
+                {detail?.origin ? JSON.stringify(detail.origin) : "— (ikke sat endnu)"}
+              </div>
+            </div>
+
+            <div className={styles.infoRow}>
+              <div className={styles.infoLabel}>Smags-DNA</div>
+              <div className={styles.infoValue}>
+                {detail?.dna ? JSON.stringify(detail.dna) : "— (ikke sat endnu)"}
+              </div>
+            </div>
+
+            {bm.missingText ? <div className={styles.missing}>{bm.missingText}</div> : null}
+
+            <div className={styles.actionsStack}>
               <button className={styles.secondaryBtn} onClick={onSaveToInventory} disabled={busy || !canSaveInventory}>
                 {busy ? "Gemmer…" : "Gem i inventory"}
               </button>
-            </section>
-          )}
+            </div>
+          </section>
 
+          {/* Edit / correction */}
           <section className={styles.card}>
             <button className={styles.accordionHeader} onClick={() => setEditOpen((v) => !v)}>
               <span>Ret info</span>
@@ -667,7 +667,7 @@ export default function ScanClient() {
 
       {showSticky && (
         <div className={styles.sticky}>
-          <button className={styles.stickyBtn} onClick={onStickyClick} disabled={stickyDisabled}>
+          <button className={styles.stickyBtn} onClick={onScan} disabled={stickyDisabled}>
             {stickyLabel}
           </button>
         </div>
