@@ -1,15 +1,22 @@
 "use client";
 
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+
+function safeNext(raw: string | null) {
+  const v = raw || "/";
+  // kun interne paths
+  if (!v.startsWith("/")) return "/";
+  if (v.startsWith("//")) return "/";
+  return v;
+}
 
 export default function LoginClient() {
   const supabase = useMemo(() => supabaseBrowser(), []);
   const search = useSearchParams();
-  const router = useRouter();
 
-  const next = search.get("next") || "/";
+  const next = safeNext(search.get("next"));
 
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
@@ -22,10 +29,14 @@ export default function LoginClient() {
     setBusy(true);
 
     try {
+      const origin = window.location.origin;
+      const emailRedirectTo = `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
+
       const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: `${window.location.origin}${next}` },
+        email: email.trim(),
+        options: { emailRedirectTo },
       });
+
       if (error) throw new Error(error.message);
       setMsg("Tjek din email for login-link ✅");
     } catch (e: any) {
@@ -45,6 +56,7 @@ export default function LoginClient() {
         onChange={(e) => setEmail(e.target.value)}
         placeholder="din@email.dk"
         inputMode="email"
+        autoComplete="email"
         style={{ width: "100%", padding: 12, borderRadius: 12, marginTop: 10 }}
       />
 
