@@ -30,6 +30,11 @@
   /* “wow” backdrop glow (dark default) */
   --glow-1: radial-gradient(900px 520px at 50% -120px, hsl(var(--accent-h) 70% 55% / .26), transparent 60%);
   --glow-2: radial-gradient(520px 360px at 20% 12%, hsl(calc(var(--accent-h) + 18) 70% 55% / .14), transparent 60%);
+
+  /* Controls */
+  --control-bg: color-mix(in oklab, var(--card) 80%, transparent);
+  --control-bg-2: color-mix(in oklab, var(--card2) 90%, transparent);
+  --control-border: var(--border2);
 }
 
 /* -------- Dark theme -------- */
@@ -72,7 +77,7 @@ html[data-theme="light"] {
   --shadow-boost: .65;
 }
 
-/* -------- Global element polish (fix blå tekst + iOS defaults) -------- */
+/* -------- Global element polish -------- */
 html, body {
   background: var(--bg);
   color: var(--text);
@@ -80,22 +85,42 @@ html, body {
 }
 
 body {
-  /* wow background */
   background-image: var(--glow-1), var(--glow-2), linear-gradient(180deg, var(--bg), var(--bg2));
   background-attachment: fixed;
 }
 
-/* Links - stop “random blue” */
-a, a:visited {
-  color: var(--link);
-  text-decoration: none;
-}
+/* Stop “random blue” + iOS defaults */
+a, a:visited { color: var(--link); text-decoration: none; }
 a:hover { color: var(--link-hover); }
 
-/* iOS input/link blue + focus */
-:focus-visible { outline: none; box-shadow: var(--ring); border-radius: 12px; }
-
-/* Buttons */
-button {
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
   -webkit-tap-highlight-color: transparent;
+}
+
+input::placeholder, textarea::placeholder { color: var(--muted2); }
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: 12px;
+}
+
+/* Make controls feel app-like */
+input, select, textarea {
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+}
+
+select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 2px),
+    calc(100% - 12px) calc(50% - 2px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
 }
