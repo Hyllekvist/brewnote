@@ -63,14 +63,12 @@ function Bar({ label, value }: { label: string; value: number }) {
   const clamped = Math.max(1, Math.min(10, value));
   const w = `${Math.round((clamped / 10) * 100)}%`;
   return (
-    <div className={styles.tasteRow} aria-label={`${label}: ${clamped}/10 (${labelLevel(clamped)})`}>
+    <div className={styles.tasteRow}>
       <div className={styles.tasteLeft}>{label}</div>
-
-      <div className={styles.tasteBar} role="progressbar" aria-valuemin={1} aria-valuemax={10} aria-valuenow={clamped}>
+      <div className={styles.tasteBar}>
         <div className={styles.tasteFill} style={{ width: w }} />
-        <div className={styles.tasteGlow} aria-hidden="true" style={{ left: w }} />
+        <div className={styles.tasteGlow} style={{ left: w }} aria-hidden="true" />
       </div>
-
       <div className={styles.tasteRight}>
         <span className={styles.tasteLevel}>{labelLevel(clamped)}</span>
       </div>
@@ -83,11 +81,12 @@ export default function BrewmasterPanel({ confidence, match, brew, origin, dna, 
 
   const conf = pct(confidence);
   const dnaData = readDna(dna) ?? estimateTaste(match);
+
   const estNote = dnaData.isEstimated
-    ? "MVP · estimeret (bliver skarpere når DNA udfyldes)"
+    ? "Estimat (bliver skarpere når flere rates)"
     : "Bygget på ratings (learning)";
 
-  const brandLine = `${match.brand}${match.line ? ` ${match.line}` : ""}`.trim();
+  const title = `${match.brand}${match.line ? ` ${match.line}` : ""} ${match.name}`.trim();
 
   const info = [
     { k: "Størrelse", v: match.size_g ? `${match.size_g}g` : "—" },
@@ -100,10 +99,10 @@ export default function BrewmasterPanel({ confidence, match, brew, origin, dna, 
     <section className={styles.wrap} aria-label="Brewmaster">
       <div className={styles.topGlow} aria-hidden="true" />
 
-      <header className={styles.head}>
+      <div className={styles.head}>
         <div className={styles.pills}>
           <span className={styles.pill}>BREWMASTER</span>
-          <span className={styles.pillSoft}>Confidence · {conf}%</span>
+          <span className={styles.pillSoft}>Match · {conf}%</span>
         </div>
 
         <div className={styles.confTrack} aria-hidden="true">
@@ -111,10 +110,10 @@ export default function BrewmasterPanel({ confidence, match, brew, origin, dna, 
         </div>
 
         <h2 className={styles.title}>
-          <span className={styles.titleTop}>{brandLine}</span>
-          <span className={styles.titleBottom}>{match.name}</span>
+          <span className={styles.titleTop}>Din pose</span>
+          <span className={styles.titleBottom}>{title}</span>
         </h2>
-      </header>
+      </div>
 
       <div className={styles.infoGrid}>
         {info.map((x) => (
@@ -125,7 +124,7 @@ export default function BrewmasterPanel({ confidence, match, brew, origin, dna, 
         ))}
       </div>
 
-      <section className={styles.block}>
+      <div className={styles.block}>
         <div className={styles.blockHead}>
           <div className={styles.blockTitle}>Taste profile</div>
           <div className={styles.blockSub}>{estNote}</div>
@@ -136,35 +135,35 @@ export default function BrewmasterPanel({ confidence, match, brew, origin, dna, 
           <Bar label="Body" value={dnaData.body} />
           <Bar label="Clarity" value={dnaData.clarity} />
         </div>
-      </section>
+      </div>
 
-      <section className={styles.block}>
+      <div className={styles.block}>
         <div className={styles.blockHead}>
           <div className={styles.blockTitle}>Best brew right now</div>
-          <div className={styles.blockSub}>Start her — finjustér med grind.</div>
+          <div className={styles.blockSub}>Start her. Justér først grind.</div>
         </div>
 
         {brew ? (
           <div className={styles.brewHero}>
-            <div className={styles.brewMethod}>{brew.method}</div>
-
-            <div className={styles.brewMeta}>
-              <span><span className={styles.metaK}>Grind</span> <b>{brew.grind}</b></span>
-              <span><span className={styles.metaK}>Ratio</span> <b>{brew.ratio}</b></span>
-              <span><span className={styles.metaK}>Temp</span> <b>{brew.temp_c}°C</b></span>
+            <div className={styles.brewMain}>
+              <div className={styles.brewMethod}>{brew.method}</div>
+              <div className={styles.brewMeta}>
+                <span><span className={styles.metaK}>Grind</span> <b>{brew.grind}</b></span>
+                <span><span className={styles.metaK}>Ratio</span> <b>{brew.ratio}</b></span>
+                <span><span className={styles.metaK}>Temp</span> <b>{brew.temp_c}°C</b></span>
+              </div>
             </div>
-
             {brew.notes ? <div className={styles.brewNotes}>{brew.notes}</div> : null}
           </div>
         ) : (
           <div className={styles.placeholder}>Ingen brew preset endnu.</div>
         )}
-      </section>
+      </div>
 
-      <section className={styles.block}>
+      <div className={styles.block}>
         <div className={styles.blockHead}>
           <div className={styles.blockTitle}>Knowledge base</div>
-          <div className={styles.blockSub}>Bygger over tid, én scan ad gangen.</div>
+          <div className={styles.blockSub}>Bygger over tid.</div>
         </div>
 
         <div className={styles.kb}>
@@ -179,7 +178,7 @@ export default function BrewmasterPanel({ confidence, match, brew, origin, dna, 
         </div>
 
         {missingText ? <div className={styles.missing}>{missingText}</div> : null}
-      </section>
+      </div>
     </section>
   );
 }
