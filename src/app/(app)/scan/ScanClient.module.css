@@ -1,64 +1,13 @@
 /* =========================================================
-   BrewNote — Scan UI v2 (CSS Modules safe)
+   BrewNote — Scan UI v2 (CSS Modules SAFE)
+   Tokens ligger i globals.css på html[data-theme]
    ========================================================= */
-
-/* ---------- Theme tokens (MUST include local class) ---------- */
-
-:global(html[data-theme="dark"]) .page {
-  --bg: #0b0d10;
-  --panel: rgba(255,255,255,0.06);
-  --panel2: rgba(255,255,255,0.08);
-  --stroke: rgba(255,255,255,0.10);
-  --stroke2: rgba(255,255,255,0.14);
-  --ink: rgba(255,255,255,0.92);
-  --muted: rgba(255,255,255,0.62);
-  --muted2: rgba(255,255,255,0.45);
-
-  --accent: #caa36b;
-  --accent2: #a9804a;
-  --good: #1fa97b;
-  --bad: #ff4d5e;
-
-  --shadow: 0 24px 70px rgba(0,0,0,0.55);
-  --shadow2: 0 14px 44px rgba(0,0,0,0.45);
-
-  --radius: 22px;
-  --radius2: 16px;
-
-  --glass: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
-}
-
-:global(html[data-theme="light"]) .page {
-  --bg: #f6f7f9;
-  --panel: rgba(10,12,16,0.04);
-  --panel2: rgba(10,12,16,0.06);
-  --stroke: rgba(10,12,16,0.08);
-  --stroke2: rgba(10,12,16,0.12);
-  --ink: rgba(10,12,16,0.92);
-  --muted: rgba(10,12,16,0.62);
-  --muted2: rgba(10,12,16,0.45);
-
-  --accent: #b2844b;
-  --accent2: #8d6432;
-  --good: #0f8a60;
-  --bad: #e53b4a;
-
-  --shadow: 0 22px 56px rgba(0,0,0,0.12);
-  --shadow2: 0 12px 36px rgba(0,0,0,0.10);
-
-  --radius: 22px;
-  --radius2: 16px;
-
-  --glass: linear-gradient(180deg, rgba(255,255,255,0.80), rgba(255,255,255,0.55));
-}
-
-/* ---------- Page shell ---------- */
 
 .page {
   min-height: 100vh;
   background: var(--bg);
   color: var(--ink);
-  padding: 16px 14px 120px;
+  padding: 16px 14px 180px; /* ekstra plads til bottom nav + sticky */
 }
 
 /* ---------- Hero ---------- */
@@ -130,13 +79,14 @@
 
 .scanFrame {
   position: relative;
-  height: 200px;
+  height: 220px;
   margin: 14px 0;
   border-radius: var(--radius2);
-  background: rgba(0,0,0,0.25);
+  background: rgba(0, 0, 0, 0.22);
   border: 1px dashed var(--stroke2);
   display: grid;
   place-items: center;
+  overflow: hidden;
 }
 
 .frameIcon {
@@ -151,18 +101,13 @@
 .scanSweep {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(202,163,107,0.25),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(202, 163, 107, 0.25), transparent);
   animation: sweep 1.4s linear infinite;
 }
 
 @keyframes sweep {
   from { transform: translateX(-100%); }
-  to { transform: translateX(100%); }
+  to   { transform: translateX(100%); }
 }
 
 /* ---------- Controls ---------- */
@@ -176,12 +121,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 12px;
+  padding: 12px 14px;
   border-radius: 999px;
   background: var(--panel2);
   border: 1px solid var(--stroke);
   cursor: pointer;
   font-weight: 600;
+  user-select: none;
 }
 
 .fileInput {
@@ -210,43 +156,48 @@
   border: none;
   background: linear-gradient(180deg, var(--accent), var(--accent2));
   color: #0b0d10;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .primaryBtn:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
 .secondaryBtn {
   margin-top: 10px;
-  padding: 12px;
+  padding: 12px 14px;
   border-radius: 999px;
   border: 1px solid var(--stroke);
   background: var(--panel);
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .ghostBtn {
-  padding: 12px;
+  padding: 12px 14px;
   border-radius: 999px;
   background: transparent;
   border: none;
   color: var(--accent);
+  font-weight: 700;
 }
 
 /* ---------- Notices ---------- */
 
 .noticeWrap {
   margin-top: 12px;
+  display: grid;
+  gap: 8px;
 }
 
 .noticeError {
   color: var(--bad);
+  font-weight: 600;
 }
 
 .noticeOk {
   color: var(--good);
+  font-weight: 600;
 }
 
 /* ---------- Pills ---------- */
@@ -255,14 +206,15 @@
   display: flex;
   gap: 8px;
   margin-top: 14px;
+  flex-wrap: wrap;
 }
 
 .pillStrong {
   padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(31,169,123,0.2);
+  background: rgba(31, 169, 123, 0.18);
   color: var(--good);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 13px;
 }
 
@@ -272,13 +224,14 @@
   background: var(--panel2);
   color: var(--muted);
   font-size: 13px;
+  font-weight: 600;
 }
 
 /* ---------- Product ---------- */
 
 .productTitle {
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .metaGrid {
@@ -292,18 +245,20 @@
   background: var(--panel2);
   border-radius: 12px;
   padding: 10px;
+  border: 1px solid var(--stroke);
 }
 
 .metaItem span {
   display: block;
   font-size: 12px;
   color: var(--muted);
+  margin-bottom: 2px;
 }
 
 /* ---------- Info ---------- */
 
 .sectionTitle {
-  font-weight: 700;
+  font-weight: 800;
   margin-bottom: 8px;
 }
 
@@ -311,7 +266,7 @@
   display: grid;
   grid-template-columns: 90px 1fr;
   gap: 10px;
-  padding: 8px 0;
+  padding: 10px 0;
   border-top: 1px solid var(--stroke);
 }
 
@@ -340,11 +295,12 @@
   padding: 12px 16px;
   display: flex;
   justify-content: space-between;
-  font-weight: 600;
+  font-weight: 800;
+  color: var(--ink);
 }
 
 .chev {
-  opacity: 0.6;
+  opacity: 0.65;
 }
 
 /* ---------- Form ---------- */
@@ -357,7 +313,7 @@
 
 .field {
   display: grid;
-  gap: 4px;
+  gap: 6px;
 }
 
 .field span {
@@ -367,8 +323,8 @@
 
 .field input,
 .field select {
-  padding: 10px;
-  border-radius: 10px;
+  padding: 12px 12px;
+  border-radius: 12px;
   border: 1px solid var(--stroke);
   background: var(--panel);
   color: var(--ink);
@@ -380,22 +336,31 @@
   display: flex;
   gap: 10px;
   margin-top: 10px;
+  flex-wrap: wrap;
 }
 
-/* ---------- Sticky ---------- */
+/* ---------- Sticky (over bottom nav) ---------- */
 
 .sticky {
   position: fixed;
-  bottom: 16px;
   left: 16px;
   right: 16px;
+
+  /* 72px er typisk bottom nav højde + safe area + lidt luft */
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  z-index: 50;
+
+  pointer-events: none; /* så den ikke “spiser” scroll/taps udenfor knappen */
 }
 
 .stickyBtn {
+  pointer-events: auto;
   width: 100%;
   padding: 14px;
   border-radius: 999px;
   border: none;
   background: linear-gradient(180deg, var(--accent), var(--accent2));
-  font-weight: 700;
+  font-weight: 800;
+  color: #0b0d10;
+  box-shadow: var(--shadow2);
 }
