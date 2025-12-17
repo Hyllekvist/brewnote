@@ -1,21 +1,21 @@
 .wrap{
   position:relative;
-  border-radius:22px;
-  padding:18px;
-  background:
-    radial-gradient(1200px 500px at 20% -10%, rgba(210,170,110,0.14), transparent 55%),
-    radial-gradient(900px 420px at 110% 20%, rgba(255,255,255,0.06), transparent 50%),
-    rgba(255,255,255,0.03);
-  border:1px solid rgba(255,255,255,0.10);
-  box-shadow: 0 20px 70px rgba(0,0,0,0.55);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  background: linear-gradient(180deg, var(--card), var(--card2));
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
   overflow:hidden;
 }
 
 .topGlow{
   position:absolute;
   inset:-1px;
-  background: linear-gradient(180deg, rgba(210,170,110,0.08), transparent 55%);
+  background:
+    radial-gradient(900px 420px at 20% -10%, hsl(var(--accent-h) 70% 60% / .20), transparent 62%),
+    radial-gradient(700px 360px at 110% 20%, hsl(calc(var(--accent-h) + 14) 70% 60% / .14), transparent 60%);
   pointer-events:none;
+  opacity: .9;
 }
 
 .head{ position:relative; }
@@ -30,45 +30,57 @@
 .pill{
   font-size:12px;
   letter-spacing:0.16em;
-  font-weight:800;
+  font-weight:850;
   padding:8px 12px;
   border-radius:999px;
-  background: rgba(0,0,0,0.22);
-  border:1px solid rgba(255,255,255,0.10);
+  background: var(--chip);
+  border: 1px solid var(--border2);
+  color: var(--text);
   text-transform:uppercase;
 }
 
 .pillSoft{
   font-size:12px;
-  font-weight:700;
+  font-weight:750;
   padding:8px 12px;
   border-radius:999px;
-  background: rgba(255,255,255,0.04);
-  border:1px solid rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.82);
+  background: color-mix(in oklab, var(--chip) 70%, transparent);
+  border: 1px solid var(--border2);
+  color: var(--muted);
 }
 
 .confTrack{
   height:10px;
   border-radius:999px;
-  background: rgba(255,255,255,0.07);
-  border:1px solid rgba(255,255,255,0.08);
+  background: var(--track);
+  border: 1px solid var(--border2);
   overflow:hidden;
   margin-bottom:12px;
 }
 .confFill{
   height:100%;
   width:0%;
-  background: linear-gradient(90deg, rgba(210,170,110,0.30), rgba(210,170,110,0.85));
-  box-shadow: 0 0 24px rgba(210,170,110,0.35);
+  background: linear-gradient(90deg, hsl(var(--accent-h) 55% 55% / .35), var(--accent));
+  box-shadow: 0 0 18px hsl(var(--accent-h) 70% 60% / .28);
 }
 
 .title{
   margin: 0;
-  font-size: 26px;
-  line-height: 1.12;
-  letter-spacing: -0.02em;
-  font-weight: 850;
+  display: grid;
+  gap: 2px;
+}
+.titleTop{
+  font-size: 15px;
+  color: var(--muted);
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+.titleBottom{
+  font-size: 30px;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  font-weight: 900;
+  color: var(--text);
 }
 
 .infoGrid{
@@ -79,29 +91,30 @@
 }
 
 .infoCard{
-  border-radius:16px;
+  border-radius: var(--radius-md);
   padding:12px 12px;
-  background: rgba(255,255,255,0.03);
-  border:1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(180deg, var(--card), transparent);
+  border: 1px solid var(--border2);
 }
 
 .infoK{
   font-size:12px;
-  color: rgba(255,255,255,0.62);
+  color: var(--muted);
   margin-bottom:4px;
 }
 .infoV{
   font-size:18px;
-  font-weight:800;
+  font-weight:900;
   letter-spacing:-0.01em;
+  color: var(--text);
 }
 
 .block{
   margin-top:14px;
-  border-radius:18px;
+  border-radius: var(--radius-md);
   padding:14px;
-  background: rgba(0,0,0,0.18);
-  border:1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(180deg, color-mix(in oklab, var(--card) 80%, transparent), transparent);
+  border: 1px solid var(--border2);
 }
 
 .blockHead{
@@ -113,16 +126,17 @@
 }
 
 .blockTitle{
-  font-weight:850;
-  letter-spacing:0.10em;
+  font-weight:900;
+  letter-spacing:0.12em;
   text-transform:uppercase;
   font-size:12px;
-  color: rgba(255,255,255,0.78);
+  color: var(--muted);
 }
 
 .blockSub{
   font-size:12px;
-  color: rgba(255,255,255,0.55);
+  color: var(--muted2);
+  text-align: right;
 }
 
 .taste{
@@ -138,20 +152,31 @@
 }
 
 .tasteLeft{
-  font-weight:700;
-  color: rgba(255,255,255,0.82);
+  font-weight:750;
+  color: var(--text);
+  opacity: .92;
 }
 .tasteRight{
   text-align:right;
-  font-weight:800;
-  color: rgba(255,255,255,0.86);
+  font-weight:900;
+  color: var(--text);
+}
+
+.tasteLevel{
+  display:inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--chip);
+  border: 1px solid var(--border2);
+  font-size: 12px;
 }
 
 .tasteBar{
+  position: relative;
   height:12px;
   border-radius:999px;
-  background: rgba(255,255,255,0.06);
-  border:1px solid rgba(255,255,255,0.08);
+  background: var(--track);
+  border: 1px solid var(--border2);
   overflow:hidden;
 }
 
@@ -159,38 +184,60 @@
   height:100%;
   width:0%;
   border-radius:999px;
-  background: linear-gradient(90deg, rgba(210,170,110,0.30), rgba(210,170,110,0.90));
-  box-shadow: 0 0 18px rgba(210,170,110,0.30);
+  background: linear-gradient(90deg, hsl(var(--accent-h) 55% 55% / .35), var(--accent));
+  box-shadow: 0 0 14px hsl(var(--accent-h) 70% 60% / .22);
+}
+
+.tasteGlow{
+  position:absolute;
+  top:50%;
+  transform: translate(-50%, -50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: hsl(var(--accent-h) 75% 60% / .22);
+  filter: blur(2px);
+  pointer-events:none;
 }
 
 .brewHero{
-  border-radius:16px;
+  border-radius: var(--radius-md);
   padding:14px;
   background:
-    radial-gradient(600px 200px at 20% 0%, rgba(210,170,110,0.12), transparent 55%),
-    rgba(255,255,255,0.03);
-  border:1px solid rgba(255,255,255,0.10);
+    radial-gradient(700px 220px at 20% 0%, hsl(var(--accent-h) 70% 60% / .16), transparent 60%),
+    linear-gradient(180deg, var(--card), transparent);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
 }
 
 .brewMethod{
   font-size:18px;
-  font-weight:900;
+  font-weight:950;
   letter-spacing:-0.01em;
+  color: var(--text);
 }
 
 .brewMeta{
-  margin-top:8px;
+  margin-top:10px;
   display:flex;
   flex-wrap:wrap;
   gap:10px;
-  color: rgba(255,255,255,0.72);
+  color: var(--muted);
   font-size:13px;
 }
-.brewMeta b{ color: rgba(255,255,255,0.92); }
+
+.metaK{
+  color: var(--muted2);
+  margin-right: 6px;
+}
+
+.brewMeta b{
+  color: var(--text);
+}
 
 .brewNotes{
   margin-top:10px;
-  color: rgba(255,255,255,0.62);
+  color: var(--muted);
   font-size:13px;
   line-height:1.35;
 }
@@ -206,32 +253,32 @@
   align-items:center;
   padding:10px 12px;
   border-radius:14px;
-  background: rgba(255,255,255,0.02);
-  border:1px solid rgba(255,255,255,0.07);
-  color: rgba(255,255,255,0.78);
-  font-weight:650;
+  background: linear-gradient(180deg, var(--card), transparent);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-weight:750;
 }
 
 .kbVal{
-  color: rgba(255,255,255,0.70);
-  font-weight:800;
+  color: var(--muted);
+  font-weight:900;
 }
 
 .missing{
   margin-top:10px;
   padding:10px 12px;
   border-radius:14px;
-  background: rgba(255,255,255,0.03);
-  border:1px solid rgba(255,255,255,0.07);
-  color: rgba(255,255,255,0.62);
+  background: linear-gradient(180deg, var(--card), transparent);
+  border: 1px solid var(--border2);
+  color: var(--muted);
   font-size:12px;
 }
 
 .placeholder{
   padding:12px;
   border-radius:14px;
-  background: rgba(255,255,255,0.02);
-  border:1px solid rgba(255,255,255,0.07);
-  color: rgba(255,255,255,0.60);
+  background: linear-gradient(180deg, var(--card), transparent);
+  border: 1px solid var(--border2);
+  color: var(--muted);
   font-size:13px;
 }
