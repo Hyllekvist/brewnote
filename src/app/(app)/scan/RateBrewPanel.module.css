@@ -1,0 +1,136 @@
+.wrap {
+  margin-top: 14px;
+  border: 1px solid var(--stroke);
+  background: var(--glass);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow2);
+  padding: 14px;
+}
+
+.head { margin-bottom: 10px; }
+.badge {
+  display: inline-flex;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--panel2);
+  border: 1px solid var(--stroke);
+  font-size: 11px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.title {
+  margin-top: 8px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.sub {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.slider {
+  border: 1px solid var(--stroke);
+  background: var(--panel);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted2);
+}
+
+.choiceRow {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.choiceLabel {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.choiceBtns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+  background: var(--panel);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.chipOn {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(202,163,107,0.18);
+}
+
+.notes {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.notes span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.notes textarea {
+  border: 1px solid var(--stroke);
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: 14px;
+  padding: 10px;
+  resize: vertical;
+}
+
+.msg { margin-top: 10px; }
+.err { color: var(--bad); white-space: pre-wrap; }
+.ok { color: var(--good); }
+
+.primary {
+  margin-top: 12px;
+  width: 100%;
+  padding: 14px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(180deg, var(--accent), var(--accent2));
+  color: #0b0d10;
+  font-weight: 900;
+}
+
+.primary:disabled { opacity: 0.6; }
+
+.muted {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted2);
+}
