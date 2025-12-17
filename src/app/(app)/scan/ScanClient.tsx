@@ -410,10 +410,14 @@ export default function ScanClient() {
             missingText={missingText}
           />
 <RateBrewPanel
-      sessionId={result.sessionId}
-      productId={result.match?.product_id ?? null}
-      variantId={result.match?.variant_id ?? null}
-    />
+  sessionId={result.sessionId}
+  productId={result.match?.product_id ?? null}
+  variantId={result.match?.variant_id ?? null}
+  onSaved={() => {
+    const vid = result.match?.variant_id;
+    if (vid) loadDetails(vid); // 👈 instant refresh af dna/origin/brew
+  }}
+/>
           {/* Din eksisterende actions (inventory + edit) – behold dem, men nu efter panel */}
           <section className={styles.card}>
             <button className={styles.secondaryBtn} onClick={onSaveToInventory} disabled={busy || !canSaveInventory}>
