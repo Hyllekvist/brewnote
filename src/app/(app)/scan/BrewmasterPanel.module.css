@@ -4,7 +4,7 @@
   padding: 16px;
   background: linear-gradient(180deg, var(--card), var(--card2));
   border: 1px solid var(--border);
-  box-shadow: var(--shadow-1);
+  box-shadow: var(--shadow-2);
   overflow:hidden;
 }
 
@@ -12,10 +12,10 @@
   position:absolute;
   inset:-1px;
   background:
-    radial-gradient(900px 420px at 20% -10%, hsl(var(--accent-h) 70% 60% / .20), transparent 62%),
-    radial-gradient(700px 360px at 110% 20%, hsl(calc(var(--accent-h) + 14) 70% 60% / .14), transparent 60%);
+    radial-gradient(900px 420px at 18% -10%, hsl(var(--accent-h) 70% 60% / .22), transparent 62%),
+    radial-gradient(700px 360px at 112% 22%, hsl(calc(var(--accent-h) + 14) 70% 60% / .14), transparent 60%);
   pointer-events:none;
-  opacity: .9;
+  opacity: .95;
 }
 
 .head{ position:relative; }
@@ -30,7 +30,7 @@
 .pill{
   font-size:12px;
   letter-spacing:0.16em;
-  font-weight:850;
+  font-weight:900;
   padding:8px 12px;
   border-radius:999px;
   background: var(--chip);
@@ -41,10 +41,10 @@
 
 .pillSoft{
   font-size:12px;
-  font-weight:750;
+  font-weight:800;
   padding:8px 12px;
   border-radius:999px;
-  background: color-mix(in oklab, var(--chip) 70%, transparent);
+  background: color-mix(in oklab, var(--chip) 72%, transparent);
   border: 1px solid var(--border2);
   color: var(--muted);
 }
@@ -57,9 +57,9 @@
   overflow:hidden;
   margin-bottom:12px;
 }
+
 .confFill{
   height:100%;
-  width:0%;
   background: linear-gradient(90deg, hsl(var(--accent-h) 55% 55% / .35), var(--accent));
   box-shadow: 0 0 18px hsl(var(--accent-h) 70% 60% / .28);
 }
@@ -69,17 +69,19 @@
   display: grid;
   gap: 2px;
 }
+
 .titleTop{
-  font-size: 15px;
+  font-size: 14px;
   color: var(--muted);
-  font-weight: 750;
+  font-weight: 800;
   letter-spacing: -0.01em;
 }
+
 .titleBottom{
   font-size: 30px;
   line-height: 1.08;
   letter-spacing: -0.03em;
-  font-weight: 900;
+  font-weight: 950;
   color: var(--text);
 }
 
@@ -102,9 +104,10 @@
   color: var(--muted);
   margin-bottom:4px;
 }
+
 .infoV{
   font-size:18px;
-  font-weight:900;
+  font-weight:950;
   letter-spacing:-0.01em;
   color: var(--text);
 }
@@ -126,7 +129,7 @@
 }
 
 .blockTitle{
-  font-weight:900;
+  font-weight:950;
   letter-spacing:0.12em;
   text-transform:uppercase;
   font-size:12px;
@@ -146,16 +149,17 @@
 
 .tasteRow{
   display:grid;
-  grid-template-columns: 92px 1fr 64px;
+  grid-template-columns: 92px 1fr 84px;
   gap:10px;
   align-items:center;
 }
 
 .tasteLeft{
-  font-weight:750;
+  font-weight:800;
   color: var(--text);
   opacity: .92;
 }
+
 .tasteRight{
   text-align:right;
   font-weight:900;
@@ -164,6 +168,8 @@
 
 .tasteLevel{
   display:inline-flex;
+  justify-content: center;
+  min-width: 74px;
   padding: 6px 10px;
   border-radius: 999px;
   background: var(--chip);
@@ -182,7 +188,6 @@
 
 .tasteFill{
   height:100%;
-  width:0%;
   border-radius:999px;
   background: linear-gradient(90deg, hsl(var(--accent-h) 55% 55% / .35), var(--accent));
   box-shadow: 0 0 14px hsl(var(--accent-h) 70% 60% / .22);
@@ -231,9 +236,7 @@
   margin-right: 6px;
 }
 
-.brewMeta b{
-  color: var(--text);
-}
+.brewMeta b{ color: var(--text); }
 
 .brewNotes{
   margin-top:10px;
@@ -256,12 +259,12 @@
   background: linear-gradient(180deg, var(--card), transparent);
   border: 1px solid var(--border2);
   color: var(--text);
-  font-weight:750;
+  font-weight:800;
 }
 
 .kbVal{
   color: var(--muted);
-  font-weight:900;
+  font-weight:950;
 }
 
 .missing{
