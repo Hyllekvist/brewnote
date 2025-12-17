@@ -7,7 +7,7 @@
   min-height: 100vh;
   background: var(--bg);
   color: var(--ink);
-  padding: 16px 14px 180px; /* ekstra plads til bottom nav + sticky */
+padding: 16px 14px calc(140px + 92px + env(safe-area-inset-bottom));
 }
 
 /* ---------- Hero ---------- */
@@ -347,7 +347,7 @@
   right: 16px;
 
   /* 72px er typisk bottom nav højde + safe area + lidt luft */
-  bottom: calc(72px + env(safe-area-inset-bottom));
+  bottom: calc(16px + 92px + env(safe-area-inset-bottom));
   z-index: 50;
 
   pointer-events: none; /* så den ikke “spiser” scroll/taps udenfor knappen */
