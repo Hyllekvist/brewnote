@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import BrewmasterPanel from "./BrewmasterPanel";
 import RateBrewPanel from "./RateBrewPanel";
@@ -70,7 +71,9 @@ function safeJson(text: string) {
 
 function stableStringify(v: any) {
   try {
-    return JSON.stringify(v, Object.keys(v ?? {}).sort());
+    if (v == null) return "";
+    // deterministic-ish for simple objects
+    return JSON.stringify(v, Object.keys(v).sort());
   } catch {
     return String(v);
   }
@@ -78,15 +81,11 @@ function stableStringify(v: any) {
 
 function fingerprintDetail(d: VariantDetail | null) {
   if (!d) return "";
-  // kun det vi forventer kan ændre sig efter rating (dna/origin/brew)
-  return [
-    stableStringify(d.origin),
-    stableStringify(d.dna),
-    stableStringify(d.brew),
-  ].join("|");
+  return [stableStringify(d.origin), stableStringify(d.dna), stableStringify(d.brew)].join("|");
 }
 
 export default function ScanClient() {
+  const router = useRouter();
   const supabase = useMemo(() => supabaseBrowser(), []);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -119,6 +118,11 @@ export default function ScanClient() {
     };
   }, [previewUrl]);
 
+  function goLogin() {
+    // sender dig tilbage til scan efter login
+    router.push(`/login?next=${encodeURIComponent("/scan")}`);
+  }
+
   function loadEditFromResult(r: ProcessResult) {
     const ex = (r.extracted ?? {}) as Extracted;
     setEdit({
@@ -134,13 +138,18 @@ export default function ScanClient() {
     });
   }
 
-  async function loadDetails(variantId: string) {
-    setDetail(null);
+  async function fetchDetails(variantId: string) {
     const res = await fetch(`/api/products/variant/${variantId}`, { method: "GET" });
     const text = await res.text();
     const j = safeJson(text);
     if (!res.ok) throw new Error(`detail ${res.status}: ${j?.error ?? text}`);
-    setDetail(j as VariantDetail);
+    return j as VariantDetail;
+  }
+
+  async function loadDetails(variantId: string) {
+    setDetail(null);
+    const j = await fetchDetails(variantId);
+    setDetail(j);
   }
 
   function onPickFile(f: File | null) {
@@ -335,7 +344,11 @@ export default function ScanClient() {
 
     try {
       const { data: auth } = await supabase.auth.getUser();
-      if (!auth?.user) throw new Error("Du skal være logget ind for at gemme i inventory.");
+      if (!auth?.user) {
+        setBusy(false);
+        goLogin();
+        return;
+      }
 
       const res = await fetch("/api/inventory/add", {
         method: "POST",
@@ -345,7 +358,11 @@ export default function ScanClient() {
 
       const text = await res.text();
       const j = safeJson(text);
-      if (res.status === 401) throw new Error("Du skal være logget ind for at gemme i inventory.");
+      if (res.status === 401) {
+        setBusy(false);
+        goLogin();
+        return;
+      }
       if (!res.ok) throw new Error(`inventory ${res.status}: ${j?.error ?? text}`);
 
       setSavedMsg("Gemt i inventory ✓");
@@ -356,45 +373,36 @@ export default function ScanClient() {
     }
   }
 
-  // ✅ v5 instant refresh efter rating
+  // ✅ v5: instant refresh efter rating + “ægte” opdaterings-msg
   async function onRatingSaved() {
-  const vid = detail?.variant?.id || result?.match?.variant_id;
-  if (!vid) return;
+    const vid = detail?.variant?.id || result?.match?.variant_id;
+    if (!vid) return;
 
-  const before = fingerprintDetail(detail);
+    const before = fingerprintDetail(detail);
 
-  try {
-    // fetch + update state
-    await loadDetails(vid);
+    try {
+      const fresh = await fetchDetails(vid);
+      const after = fingerprintDetail(fresh);
 
-    // NOTE: loadDetails sætter state async, så vi kan ikke læse "detail" lige efter.
-    // Derfor laver vi et direkte fetch her for at sammenligne sikkert:
-    const res = await fetch(`/api/products/variant/${vid}`, { method: "GET" });
-    const text = await res.text();
-    const j = safeJson(text);
-    if (!res.ok) return;
+      setDetail(fresh);
 
-    const after = fingerprintDetail(j as VariantDetail);
-
-    if (after && after !== before) {
-      setSavedMsg("BrewNote opdateret ✓");
-    } else {
-      // ingen ændring -> ingen “fake” opdatering
+      if (after && after !== before) setSavedMsg("BrewNote opdateret ✓");
+      else setSavedMsg("Tak — gemt ✅");
+    } catch {
       setSavedMsg("Tak — gemt ✅");
     }
-  } catch {
-    // rating er stadig gemt, vi gider ikke larme
-    setSavedMsg("Tak — gemt ✅");
   }
-}
 
   const confidence = result?.confidence ?? 0;
-  const canSaveInventory = result?.status === "resolved" && (detail?.variant?.id || result?.match?.variant_id);
+  const canSaveInventory =
+    result?.status === "resolved" && (detail?.variant?.id || result?.match?.variant_id);
 
   const missing: string[] = [];
   if (result && !detail?.origin) missing.push("origin");
   if (result && !detail?.dna) missing.push("smags-DNA");
-  const missingText = missing.length ? `Mangler: ${missing.join(" + ")} (vi lærer det over tid når flere scanner/bedømmer).` : null;
+  const missingText = missing.length
+    ? `Mangler: ${missing.join(" + ")} (vi lærer det over tid når flere scanner/bedømmer).`
+    : null;
 
   const showSticky = stage !== "idle" && !!file;
 
@@ -403,13 +411,9 @@ export default function ScanClient() {
       <section className={`${styles.card} ${styles.scanCard} ${busy ? styles.scanning : ""}`}>
         <div className={styles.scanTop}>
           <div className={styles.scanBadge}>{stage === "done" ? "Klar" : "AI Scan"}</div>
-          <div className={styles.scanTitle}>
-            {stage === "done" ? "Billede valgt" : "Peg kameraet mod posen"}
-          </div>
+          <div className={styles.scanTitle}>{stage === "done" ? "Billede valgt" : "Peg kameraet mod posen"}</div>
           <div className={styles.scanHint}>
-            {stage === "done"
-              ? "Se resultat nedenfor — eller scan igen."
-              : "Godt lys. Skarp front. Ingen glare."}
+            {stage === "done" ? "Se resultat nedenfor — eller scan igen." : "Godt lys. Skarp front. Ingen glare."}
           </div>
         </div>
 
@@ -418,9 +422,7 @@ export default function ScanClient() {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={previewUrl} alt="Preview" className={styles.previewImg} />
           ) : (
-            <div className={styles.frameIcon} aria-hidden="true">
-              ⌁
-            </div>
+            <div className={styles.frameIcon} aria-hidden="true">⌁</div>
           )}
           {busy && <div className={styles.scanSweep} aria-hidden="true" />}
         </div>
@@ -474,11 +476,7 @@ export default function ScanClient() {
           />
 
           <section className={styles.card}>
-            <button
-              className={styles.secondaryBtn}
-              onClick={onSaveToInventory}
-              disabled={busy || !canSaveInventory}
-            >
+            <button className={styles.secondaryBtn} onClick={onSaveToInventory} disabled={busy || !canSaveInventory}>
               {busy ? "Gemmer…" : "Gem i inventory"}
             </button>
           </section>
@@ -493,26 +491,17 @@ export default function ScanClient() {
               <div className={styles.formGrid}>
                 <label className={styles.field}>
                   <span>Brand</span>
-                  <input
-                    value={edit.brand ?? ""}
-                    onChange={(e) => setEdit((p) => ({ ...p, brand: e.target.value }))}
-                  />
+                  <input value={edit.brand ?? ""} onChange={(e) => setEdit((p) => ({ ...p, brand: e.target.value }))} />
                 </label>
 
                 <label className={styles.field}>
                   <span>Line</span>
-                  <input
-                    value={edit.line ?? ""}
-                    onChange={(e) => setEdit((p) => ({ ...p, line: e.target.value }))}
-                  />
+                  <input value={edit.line ?? ""} onChange={(e) => setEdit((p) => ({ ...p, line: e.target.value }))} />
                 </label>
 
                 <label className={styles.field}>
                   <span>Name</span>
-                  <input
-                    value={edit.name ?? ""}
-                    onChange={(e) => setEdit((p) => ({ ...p, name: e.target.value }))}
-                  />
+                  <input value={edit.name ?? ""} onChange={(e) => setEdit((p) => ({ ...p, name: e.target.value }))} />
                 </label>
 
                 <label className={styles.field}>
@@ -520,21 +509,13 @@ export default function ScanClient() {
                   <input
                     inputMode="numeric"
                     value={edit.size_g ?? ""}
-                    onChange={(e) =>
-                      setEdit((p) => ({
-                        ...p,
-                        size_g: e.target.value ? Number(e.target.value) : undefined,
-                      }))
-                    }
+                    onChange={(e) => setEdit((p) => ({ ...p, size_g: e.target.value ? Number(e.target.value) : undefined }))}
                   />
                 </label>
 
                 <label className={styles.field}>
                   <span>Form</span>
-                  <select
-                    value={edit.form ?? "beans"}
-                    onChange={(e) => setEdit((p) => ({ ...p, form: e.target.value as any }))}
-                  >
+                  <select value={edit.form ?? "beans"} onChange={(e) => setEdit((p) => ({ ...p, form: e.target.value as any }))}>
                     <option value="beans">beans</option>
                     <option value="ground">ground</option>
                   </select>
@@ -544,12 +525,7 @@ export default function ScanClient() {
                   <span>Organic</span>
                   <select
                     value={edit.organic === undefined ? "" : edit.organic ? "true" : "false"}
-                    onChange={(e) =>
-                      setEdit((p) => ({
-                        ...p,
-                        organic: e.target.value === "" ? undefined : e.target.value === "true",
-                      }))
-                    }
+                    onChange={(e) => setEdit((p) => ({ ...p, organic: e.target.value === "" ? undefined : e.target.value === "true" }))}
                   >
                     <option value="">ukendt</option>
                     <option value="true">ja</option>
@@ -558,18 +534,10 @@ export default function ScanClient() {
                 </label>
 
                 <div className={styles.actionsRow}>
-                  <button
-                    className={styles.secondaryBtn}
-                    onClick={onSaveExtractedAndRetry}
-                    disabled={busy || !result?.sessionId}
-                  >
+                  <button className={styles.secondaryBtn} onClick={onSaveExtractedAndRetry} disabled={busy || !result?.sessionId}>
                     {busy ? "Arbejder…" : "Gem & match igen"}
                   </button>
-                  <button
-                    className={styles.ghostBtn}
-                    onClick={onCreateAsNewProduct}
-                    disabled={busy || !result?.sessionId}
-                  >
+                  <button className={styles.ghostBtn} onClick={onCreateAsNewProduct} disabled={busy || !result?.sessionId}>
                     {busy ? "Opretter…" : "Opret som nyt produkt"}
                   </button>
                 </div>
