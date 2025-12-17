@@ -2,35 +2,27 @@
 
 .page {
   min-height: 100vh;
-  /* mere “app” spacing + safe area */
-  padding:
-    calc(12px + env(safe-area-inset-top))
-    var(--page-pad)
-    calc(110px + env(safe-area-inset-bottom));
+  padding: 14px var(--page-pad) 110px;
   display: flex;
   flex-direction: column;
-
-  /* strammere rytme (mindre mush) */
-  gap: var(--stack-2);
-
-  /* IMPORTANT: stretch i stedet for center */
-  align-items: stretch;
+  gap: var(--stack-2);              /* V9: mere app-tight */
+  align-items: center;
 }
 
-/* Container width uden “kort i midten” feeling */
 .page > * {
   width: 100%;
   max-width: var(--page-max);
-  margin-left: auto;
-  margin-right: auto;
 }
 
-/* Mobile: lidt mere edge-to-edge */
-@media (max-width: 420px) {
+/* V9: “app container” feel – mere indhold, mindre “smal” */
+@media (min-width: 420px) {
   .page {
-    padding-left: 12px;
-    padding-right: 12px;
-    gap: var(--stack-2);
+    --page-pad: 18px;
+  }
+}
+@media (min-width: 520px) {
+  .page {
+    --page-pad: 22px;
   }
 }
 
@@ -46,9 +38,7 @@
   padding: 16px;
 }
 
-.scanning {
-  opacity: .98;
-}
+.scanning { opacity: .98; }
 
 /* Top */
 .scanTop {
@@ -73,7 +63,8 @@
 .scanTitle {
   font-size: var(--fs-4);
   line-height: 1.05;
-  font-weight: 800; /* lidt mere “app” */
+  font-weight: 850;                 /* V9: mere headline */
+  letter-spacing: -0.02em;
 }
 
 .scanHint {
@@ -87,10 +78,7 @@
   position: relative;
   border-radius: var(--radius-md);
   border: 1px dashed var(--border2);
-
-  /* theme-safe background (ikke hardcoded hvid alpha) */
-  background: color-mix(in oklab, var(--card) 75%, transparent);
-
+  background: color-mix(in oklab, var(--bg2) 60%, transparent);
   overflow: hidden;
   aspect-ratio: 1 / 1;
   margin: 12px 0;
@@ -139,7 +127,7 @@
   background: var(--chip);
   border: 1px solid var(--border2);
   color: var(--text);
-  font-weight: 700;
+  font-weight: 750;                 /* V9 */
 }
 
 .fileInput { display: none; }
@@ -157,17 +145,17 @@
 .primaryBtn {
   height: var(--btn-h);
   border-radius: var(--btn-radius);
-  border: 1px solid hsl(var(--accent-h) 40% 35% / .35);
-  background: linear-gradient(
-    180deg,
-    hsl(var(--accent-h) 55% 58% / .98),
-    hsl(var(--accent-h) 55% 50% / .98)
+  border: 1px solid color-mix(in oklab, var(--accent) 28%, var(--border2));
+  background: linear-gradient(180deg,
+    color-mix(in oklab, var(--accent) 92%, white 8%),
+    color-mix(in oklab, var(--accent) 92%, black 10%)
   );
   color: #101014;
-  font-weight: 850;
+  font-weight: 900;
   letter-spacing: .01em;
   box-shadow: var(--shadow-2);
 }
+
 .primaryBtn:disabled { opacity: .55; }
 
 /* Notices */
@@ -175,7 +163,7 @@
   width: 100%;
   max-width: var(--page-max);
   display: grid;
-  gap: 10px;
+  gap: var(--stack-1);
 }
 
 .noticeError, .noticeOk {
@@ -185,7 +173,8 @@
   background: linear-gradient(180deg, var(--card), var(--card2));
   box-shadow: var(--shadow-1);
 }
-.noticeError { color: #ffb4b4; }
+
+.noticeError { color: color-mix(in oklab, #ffb4b4 80%, var(--text)); }
 .noticeOk { color: var(--text); }
 
 /* Accordion */
@@ -198,7 +187,7 @@
   align-items: center;
   justify-content: space-between;
   color: var(--text);
-  font-weight: 800;
+  font-weight: 850;                 /* V9 */
 }
 
 .chev { color: var(--muted); }
@@ -221,10 +210,7 @@
   padding: 12px 12px;
   border-radius: 14px;
   border: 1px solid var(--border2);
-
-  /* theme-safe input fill */
-  background: color-mix(in oklab, var(--card) 70%, transparent);
-
+  background: var(--control-bg);
   color: var(--text);
 }
 
@@ -241,7 +227,7 @@
   border: 1px solid var(--border2);
   background: var(--chip);
   color: var(--text);
-  font-weight: 750;
+  font-weight: 800;                 /* V9 */
 }
 
 .ghostBtn { background: transparent; }
@@ -250,14 +236,10 @@
 .sticky {
   position: fixed;
   left: 0; right: 0;
-
-  /* lidt mere native: respekter safe-area */
-  bottom: calc(74px + env(safe-area-inset-bottom));
-
+  bottom: 74px;
   display: grid;
   place-items: center;
   pointer-events: none;
-  z-index: 20;
 }
 
 .stickyBtn {
@@ -265,13 +247,12 @@
   width: min(var(--page-max), calc(100% - (var(--page-pad) * 2)));
   height: 54px;
   border-radius: 999px;
-  border: 1px solid hsl(var(--accent-h) 40% 35% / .35);
-  background: linear-gradient(
-    180deg,
-    hsl(var(--accent-h) 55% 58% / .98),
-    hsl(var(--accent-h) 55% 50% / .98)
+  border: 1px solid color-mix(in oklab, var(--accent) 28%, var(--border2));
+  background: linear-gradient(180deg,
+    color-mix(in oklab, var(--accent) 92%, white 8%),
+    color-mix(in oklab, var(--accent) 92%, black 10%)
   );
   color: #101014;
-  font-weight: 900;
+  font-weight: 950;
   box-shadow: var(--shadow-2);
 }
