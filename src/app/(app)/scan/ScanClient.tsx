@@ -68,6 +68,24 @@ function safeJson(text: string) {
   }
 }
 
+function stableStringify(v: any) {
+  try {
+    return JSON.stringify(v, Object.keys(v ?? {}).sort());
+  } catch {
+    return String(v);
+  }
+}
+
+function fingerprintDetail(d: VariantDetail | null) {
+  if (!d) return "";
+  // kun det vi forventer kan ændre sig efter rating (dna/origin/brew)
+  return [
+    stableStringify(d.origin),
+    stableStringify(d.dna),
+    stableStringify(d.brew),
+  ].join("|");
+}
+
 export default function ScanClient() {
   const supabase = useMemo(() => supabaseBrowser(), []);
   const [file, setFile] = useState<File | null>(null);
@@ -340,16 +358,35 @@ export default function ScanClient() {
 
   // ✅ v5 instant refresh efter rating
   async function onRatingSaved() {
-    const vid = detail?.variant?.id || result?.match?.variant_id;
-    if (!vid) return;
-    try {
-      setSavedMsg("Rating gemt — opdaterer BrewNote…");
-      await loadDetails(vid);
+  const vid = detail?.variant?.id || result?.match?.variant_id;
+  if (!vid) return;
+
+  const before = fingerprintDetail(detail);
+
+  try {
+    // fetch + update state
+    await loadDetails(vid);
+
+    // NOTE: loadDetails sætter state async, så vi kan ikke læse "detail" lige efter.
+    // Derfor laver vi et direkte fetch her for at sammenligne sikkert:
+    const res = await fetch(`/api/products/variant/${vid}`, { method: "GET" });
+    const text = await res.text();
+    const j = safeJson(text);
+    if (!res.ok) return;
+
+    const after = fingerprintDetail(j as VariantDetail);
+
+    if (after && after !== before) {
       setSavedMsg("BrewNote opdateret ✓");
-    } catch {
-      // ignore – rating er stadig gemt
+    } else {
+      // ingen ændring -> ingen “fake” opdatering
+      setSavedMsg("Tak — gemt ✅");
     }
+  } catch {
+    // rating er stadig gemt, vi gider ikke larme
+    setSavedMsg("Tak — gemt ✅");
   }
+}
 
   const confidence = result?.confidence ?? 0;
   const canSaveInventory = result?.status === "resolved" && (detail?.variant?.id || result?.match?.variant_id);
