@@ -1,14 +1,10 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 
-function recommendBrew(input: {
-  form?: string | null;
-  intensity?: number | null;
-}) {
+function recommendBrew(input: { form?: string | null; intensity?: number | null }) {
   const form = input.form ?? "beans";
   const intensity = input.intensity ?? null;
 
-  // MVP heuristik (kan erstattes senere af “brew_presets”)
   if (form === "ground") {
     return {
       method: "Filter / Pour over",
@@ -19,7 +15,6 @@ function recommendBrew(input: {
     };
   }
 
-  // beans
   if (intensity != null && intensity >= 8) {
     return {
       method: "Espresso",
@@ -39,10 +34,23 @@ function recommendBrew(input: {
   };
 }
 
-export async function GET(
-  _req: Request,
-  ctx: { params: { id: string } }
-) {
+async function tryFetchVariantDna(supabase: any, variantId: string) {
+  try {
+    const { data, error } = await supabase
+      .from("variant_dna") // 👈 VIGTIG: variant-level DNA
+      .select("*")
+      .eq("variant_id", variantId)
+      .maybeSingle();
+
+    if (error) return null;
+    return data ?? null;
+  } catch {
+    // hvis tabellen ikke findes eller andet -> fallback senere
+    return null;
+  }
+}
+
+export async function GET(_req: Request, ctx: { params: { id: string } }) {
   const variantId = ctx.params.id;
   if (!variantId) {
     return NextResponse.json({ error: "Missing variant id" }, { status: 400 });
@@ -50,7 +58,7 @@ export async function GET(
 
   const supabase = supabaseServer();
 
-  // 1) variant + product (undgår relation-navne issues ved at holde det simpelt)
+  // 1) variant
   const { data: v, error: vErr } = await supabase
     .from("product_variants")
     .select("id, product_id, size_g, form, intensity, arabica_pct, organic")
@@ -61,6 +69,7 @@ export async function GET(
     return NextResponse.json({ error: "Variant not found" }, { status: 404 });
   }
 
+  // 2) product
   const { data: p, error: pErr } = await supabase
     .from("products")
     .select("id, brand, line, name")
@@ -71,19 +80,26 @@ export async function GET(
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
   }
 
-  // 2) origin (MVP: forventer 0 eller 1 row pr product)
+  // 3) origin (product-level)
   const { data: originRow } = await supabase
     .from("product_origin")
     .select("*")
     .eq("product_id", p.id)
     .maybeSingle();
 
-  // 3) dna (MVP: forventer 0 eller 1 row pr product)
-  const { data: dnaRow } = await supabase
-    .from("product_dna")
-    .select("*")
-    .eq("product_id", p.id)
-    .maybeSingle();
+  // 4) dna (variant-level først, fallback product-level)
+  const variantDna = await tryFetchVariantDna(supabase, variantId);
+
+  let dnaRow: any | null = variantDna;
+  if (!dnaRow) {
+    const { data: productDna } = await supabase
+      .from("product_dna") // fallback hvis du stadig har gamle data her
+      .select("*")
+      .eq("product_id", p.id)
+      .maybeSingle();
+
+    dnaRow = productDna ?? null;
+  }
 
   const brew = recommendBrew({ form: v.form, intensity: v.intensity });
 
