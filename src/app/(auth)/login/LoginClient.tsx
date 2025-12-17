@@ -4,19 +4,15 @@ import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
-function safeNext(raw: string | null) {
-  const v = raw || "/";
-  // kun interne paths
-  if (!v.startsWith("/")) return "/";
-  if (v.startsWith("//")) return "/";
-  return v;
-}
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (typeof window !== "undefined" ? window.location.origin : "");
 
 export default function LoginClient() {
   const supabase = useMemo(() => supabaseBrowser(), []);
   const search = useSearchParams();
 
-  const next = safeNext(search.get("next"));
+  const next = search.get("next") || "/";
 
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
@@ -29,12 +25,11 @@ export default function LoginClient() {
     setBusy(true);
 
     try {
-      const origin = window.location.origin;
-      const emailRedirectTo = `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
+      const redirectTo = `${SITE_URL}/auth/callback?next=${encodeURIComponent(next)}`;
 
       const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-        options: { emailRedirectTo },
+        email,
+        options: { emailRedirectTo: redirectTo },
       });
 
       if (error) throw new Error(error.message);
@@ -56,7 +51,6 @@ export default function LoginClient() {
         onChange={(e) => setEmail(e.target.value)}
         placeholder="din@email.dk"
         inputMode="email"
-        autoComplete="email"
         style={{ width: "100%", padding: 12, borderRadius: 12, marginTop: 10 }}
       />
 
