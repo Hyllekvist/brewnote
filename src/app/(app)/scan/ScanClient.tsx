@@ -338,6 +338,19 @@ export default function ScanClient() {
     }
   }
 
+  // ✅ v5 instant refresh efter rating
+  async function onRatingSaved() {
+    const vid = detail?.variant?.id || result?.match?.variant_id;
+    if (!vid) return;
+    try {
+      setSavedMsg("Rating gemt — opdaterer BrewNote…");
+      await loadDetails(vid);
+      setSavedMsg("BrewNote opdateret ✓");
+    } catch {
+      // ignore – rating er stadig gemt
+    }
+  }
+
   const confidence = result?.confidence ?? 0;
   const canSaveInventory = result?.status === "resolved" && (detail?.variant?.id || result?.match?.variant_id);
 
@@ -350,12 +363,17 @@ export default function ScanClient() {
 
   return (
     <div className={styles.page}>
-      {/* Din eksisterende Scan-card + flow (uændret) */}
       <section className={`${styles.card} ${styles.scanCard} ${busy ? styles.scanning : ""}`}>
         <div className={styles.scanTop}>
           <div className={styles.scanBadge}>{stage === "done" ? "Klar" : "AI Scan"}</div>
-          <div className={styles.scanTitle}>{stage === "done" ? "Billede valgt" : "Peg kameraet mod posen"}</div>
-          <div className={styles.scanHint}>{stage === "done" ? "Se resultat nedenfor — eller scan igen." : "Godt lys. Skarp front. Ingen glare."}</div>
+          <div className={styles.scanTitle}>
+            {stage === "done" ? "Billede valgt" : "Peg kameraet mod posen"}
+          </div>
+          <div className={styles.scanHint}>
+            {stage === "done"
+              ? "Se resultat nedenfor — eller scan igen."
+              : "Godt lys. Skarp front. Ingen glare."}
+          </div>
         </div>
 
         <div className={styles.scanFrame}>
@@ -363,7 +381,9 @@ export default function ScanClient() {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={previewUrl} alt="Preview" className={styles.previewImg} />
           ) : (
-            <div className={styles.frameIcon} aria-hidden="true">⌁</div>
+            <div className={styles.frameIcon} aria-hidden="true">
+              ⌁
+            </div>
           )}
           {busy && <div className={styles.scanSweep} aria-hidden="true" />}
         </div>
@@ -398,7 +418,6 @@ export default function ScanClient() {
         </div>
       )}
 
-      {/* ✅ NYT: Brewmaster panel (v3) */}
       {result && (
         <div ref={resultRef}>
           <BrewmasterPanel
@@ -409,18 +428,20 @@ export default function ScanClient() {
             dna={detail?.dna ?? null}
             missingText={missingText}
           />
-<RateBrewPanel
-  sessionId={result.sessionId}
-  productId={result.match?.product_id ?? null}
-  variantId={result.match?.variant_id ?? null}
-  onSaved={() => {
-    const vid = result.match?.variant_id;
-    if (vid) loadDetails(vid); // 👈 instant refresh af dna/origin/brew
-  }}
-/>
-          {/* Din eksisterende actions (inventory + edit) – behold dem, men nu efter panel */}
+
+          <RateBrewPanel
+            sessionId={result.sessionId}
+            productId={result.match?.product_id ?? null}
+            variantId={result.match?.variant_id ?? null}
+            onSaved={onRatingSaved}
+          />
+
           <section className={styles.card}>
-            <button className={styles.secondaryBtn} onClick={onSaveToInventory} disabled={busy || !canSaveInventory}>
+            <button
+              className={styles.secondaryBtn}
+              onClick={onSaveToInventory}
+              disabled={busy || !canSaveInventory}
+            >
               {busy ? "Gemmer…" : "Gem i inventory"}
             </button>
           </section>
@@ -435,17 +456,26 @@ export default function ScanClient() {
               <div className={styles.formGrid}>
                 <label className={styles.field}>
                   <span>Brand</span>
-                  <input value={edit.brand ?? ""} onChange={(e) => setEdit((p) => ({ ...p, brand: e.target.value }))} />
+                  <input
+                    value={edit.brand ?? ""}
+                    onChange={(e) => setEdit((p) => ({ ...p, brand: e.target.value }))}
+                  />
                 </label>
 
                 <label className={styles.field}>
                   <span>Line</span>
-                  <input value={edit.line ?? ""} onChange={(e) => setEdit((p) => ({ ...p, line: e.target.value }))} />
+                  <input
+                    value={edit.line ?? ""}
+                    onChange={(e) => setEdit((p) => ({ ...p, line: e.target.value }))}
+                  />
                 </label>
 
                 <label className={styles.field}>
                   <span>Name</span>
-                  <input value={edit.name ?? ""} onChange={(e) => setEdit((p) => ({ ...p, name: e.target.value }))} />
+                  <input
+                    value={edit.name ?? ""}
+                    onChange={(e) => setEdit((p) => ({ ...p, name: e.target.value }))}
+                  />
                 </label>
 
                 <label className={styles.field}>
@@ -453,13 +483,21 @@ export default function ScanClient() {
                   <input
                     inputMode="numeric"
                     value={edit.size_g ?? ""}
-                    onChange={(e) => setEdit((p) => ({ ...p, size_g: e.target.value ? Number(e.target.value) : undefined }))}
+                    onChange={(e) =>
+                      setEdit((p) => ({
+                        ...p,
+                        size_g: e.target.value ? Number(e.target.value) : undefined,
+                      }))
+                    }
                   />
                 </label>
 
                 <label className={styles.field}>
                   <span>Form</span>
-                  <select value={edit.form ?? "beans"} onChange={(e) => setEdit((p) => ({ ...p, form: e.target.value as any }))}>
+                  <select
+                    value={edit.form ?? "beans"}
+                    onChange={(e) => setEdit((p) => ({ ...p, form: e.target.value as any }))}
+                  >
                     <option value="beans">beans</option>
                     <option value="ground">ground</option>
                   </select>
@@ -469,7 +507,12 @@ export default function ScanClient() {
                   <span>Organic</span>
                   <select
                     value={edit.organic === undefined ? "" : edit.organic ? "true" : "false"}
-                    onChange={(e) => setEdit((p) => ({ ...p, organic: e.target.value === "" ? undefined : e.target.value === "true" }))}
+                    onChange={(e) =>
+                      setEdit((p) => ({
+                        ...p,
+                        organic: e.target.value === "" ? undefined : e.target.value === "true",
+                      }))
+                    }
                   >
                     <option value="">ukendt</option>
                     <option value="true">ja</option>
@@ -478,10 +521,18 @@ export default function ScanClient() {
                 </label>
 
                 <div className={styles.actionsRow}>
-                  <button className={styles.secondaryBtn} onClick={onSaveExtractedAndRetry} disabled={busy || !result?.sessionId}>
+                  <button
+                    className={styles.secondaryBtn}
+                    onClick={onSaveExtractedAndRetry}
+                    disabled={busy || !result?.sessionId}
+                  >
                     {busy ? "Arbejder…" : "Gem & match igen"}
                   </button>
-                  <button className={styles.ghostBtn} onClick={onCreateAsNewProduct} disabled={busy || !result?.sessionId}>
+                  <button
+                    className={styles.ghostBtn}
+                    onClick={onCreateAsNewProduct}
+                    disabled={busy || !result?.sessionId}
+                  >
                     {busy ? "Opretter…" : "Opret som nyt produkt"}
                   </button>
                 </div>
