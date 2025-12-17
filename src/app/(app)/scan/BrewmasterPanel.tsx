@@ -13,7 +13,13 @@ type Match = {
   organic?: boolean | null;
 };
 
-type Brew = { method: string; grind: string; ratio: string; temp_c: number; notes?: string };
+type Brew = {
+  method: string;
+  grind: string;
+  ratio: string;
+  temp_c: number;
+  notes?: string;
+};
 
 type Props = {
   confidence: number; // 0..1
@@ -35,7 +41,6 @@ function labelLevel(v: number) {
   return "Høj";
 }
 
-// fallback hvis dna ikke findes endnu
 function estimateTaste(match: Match | null) {
   const intensity = match?.intensity ?? null;
   const arabica = match?.arabica_pct ?? null;
@@ -58,123 +63,24 @@ function readDna(dna: any) {
   const c = Number(dna?.clarity);
 
   const ok =
-    Number.isFinite(b) && Number.isFinite(bo) && Number.isFinite(c) && b >= 1 && b <= 10 && bo >= 1 && bo <= 10 && c >= 1 && c <= 10;
+    Number.isFinite(b) &&
+    Number.isFinite(bo) &&
+    Number.isFinite(c) &&
+    b >= 1 &&
+    b <= 10 &&
+    bo >= 1 &&
+    bo <= 10 &&
+    c >= 1 &&
+    c <= 10;
 
   if (!ok) return null;
   return { bitterness: b, body: bo, clarity: c, isEstimated: false };
 }
 
-function Bar({ label, value }: { label: string; value: number }) {
+function TasteBar({ label, value }: { label: string; value: number }) {
   const clamped = Math.max(1, Math.min(10, value));
   const w = `${Math.round((clamped / 10) * 100)}%`;
+
   return (
     <div className={styles.tasteRow}>
-      <div className={styles.tasteLeft}>{label}</div>
-      <div className={styles.tasteBar}>
-        <div className={styles.tasteFill} style={{ width: w }} />
-      </div>
-      <div className={styles.tasteRight}>{labelLevel(clamped)}</div>
-    </div>
-  );
-}
-
-export default function BrewmasterPanel({ confidence, match, brew, origin, dna, missingText }: Props) {
-  if (!match) return null;
-
-  const conf = pct(confidence);
-  const dnaData = readDna(dna) ?? estimateTaste(match);
-  const estNote = dnaData.isEstimated ? "MVP · estimeret (bliver skarpere når DNA udfyldes)" : "Bygget på ratings (learning)";
-
-  const title = `${match.brand}${match.line ? ` ${match.line}` : ""} ${match.name}`.trim();
-
-  const info = [
-    { k: "Størrelse", v: match.size_g ? `${match.size_g}g` : "—" },
-    { k: "Form", v: match.form ?? "—" },
-    { k: "Arabica", v: match.arabica_pct != null ? `${match.arabica_pct}%` : "—" },
-    { k: "Organic", v: match.organic == null ? "—" : match.organic ? "Ja" : "Nej" },
-  ];
-
-  return (
-    <section className={styles.wrap} aria-label="Brewmaster">
-      <div className={styles.topGlow} aria-hidden="true" />
-
-      <div className={styles.head}>
-        <div className={styles.pills}>
-          <span className={styles.pill}>BREWMASTER</span>
-          <span className={styles.pillSoft}>Confidence · {conf}%</span>
-        </div>
-
-        <div className={styles.confTrack} aria-hidden="true">
-          <div className={styles.confFill} style={{ width: `${conf}%` }} />
-        </div>
-
-        <h2 className={styles.title}>{title}</h2>
-      </div>
-
-      <div className={styles.infoGrid}>
-        {info.map((x) => (
-          <div key={x.k} className={styles.infoCard}>
-            <div className={styles.infoK}>{x.k}</div>
-            <div className={styles.infoV}>{x.v}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className={styles.block}>
-        <div className={styles.blockHead}>
-          <div className={styles.blockTitle}>Taste profile</div>
-          <div className={styles.blockSub}>{estNote}</div>
-        </div>
-
-        <div className={styles.taste}>
-          <Bar label="Bitterness" value={dnaData.bitterness} />
-          <Bar label="Body" value={dnaData.body} />
-          <Bar label="Clarity" value={dnaData.clarity} />
-        </div>
-      </div>
-
-      <div className={styles.block}>
-        <div className={styles.blockHead}>
-          <div className={styles.blockTitle}>Best brew right now</div>
-          <div className={styles.blockSub}>Start her — finjustér med grind.</div>
-        </div>
-
-        {brew ? (
-          <div className={styles.brewHero}>
-            <div className={styles.brewMain}>
-              <div className={styles.brewMethod}>{brew.method}</div>
-              <div className={styles.brewMeta}>
-                <span>Grind: <b>{brew.grind}</b></span>
-                <span>Ratio: <b>{brew.ratio}</b></span>
-                <span>Temp: <b>{brew.temp_c}°C</b></span>
-              </div>
-            </div>
-            {brew.notes ? <div className={styles.brewNotes}>{brew.notes}</div> : null}
-          </div>
-        ) : (
-          <div className={styles.placeholder}>Ingen brew preset endnu.</div>
-        )}
-      </div>
-
-      <div className={styles.block}>
-        <div className={styles.blockHead}>
-          <div className={styles.blockTitle}>Knowledge base</div>
-          <div className={styles.blockSub}>Bygger over tid, én scan ad gangen.</div>
-        </div>
-
-        <div className={styles.kb}>
-          <div className={styles.kbRow}>
-            <span>Origin</span>
-            <span className={styles.kbVal}>{origin ? "✓ sat" : "— ikke sat endnu"}</span>
-          </div>
-          <div className={styles.kbRow}>
-            <span>Smags-DNA</span>
-            <span className={styles.kbVal}>{dna ? "✓ sat" : "— ikke sat endnu"}</span>
-          </div>
-        </div>
-
-        {missingText ? <div className={styles.missing}>{missingText}</div> : null}
-      </div>
-    </section>
-  );
-}
+      <div className={styles.t
