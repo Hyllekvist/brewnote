@@ -1,61 +1,50 @@
+/* src/styles/tokens.css */
+
 :root {
-  /* theme tokens – default = dark */
-  --bg: #0b0c0f;
-  --surface: rgba(255,255,255,0.06);
-  --surface2: rgba(255,255,255,0.08);
-  --border: rgba(255,255,255,0.10);
-  --border2: rgba(255,255,255,0.14);
+  /* Layout */
+  --page-max: 720px;
+  --page-pad: 16px;
+  --stack-1: 10px;
+  --stack-2: 14px;
+  --stack-3: 18px;
+  --radius-lg: 24px;
+  --radius-md: 18px;
+  --radius-sm: 14px;
 
-  --ink: rgba(255,255,255,0.92);
-  --muted: rgba(255,255,255,0.70);
-  --muted2: rgba(255,255,255,0.55);
+  /* Type */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  --fs-1: 13px;
+  --fs-2: 15px;
+  --fs-3: 18px;
+  --fs-4: 24px;
+  --fs-5: 34px;
 
-  --accent: #c9a36b;         /* gold */
-  --accent2: #b89055;        /* deeper gold */
-  --accentSoft: rgba(201,163,107,0.14);
+  --lh-1: 1.25;
+  --lh-2: 1.35;
 
-  --shadow: 0 12px 30px rgba(0,0,0,0.35);
-  --shadowStrong: 0 18px 44px rgba(0,0,0,0.48);
-  --inset: inset 0 1px 0 rgba(255,255,255,0.06);
+  /* Motion */
+  --ease-out: cubic-bezier(.2,.9,.2,1);
+  --dur-1: 140ms;
+  --dur-2: 220ms;
 
-  --radius: 18px;
-  --radiusSm: 14px;
+  /* Brand */
+  --accent-h: 36;
+  --accent-s: 55%;
+  --accent-l: 58%;
 
-  --btnInk: rgba(20,20,20,0.95);
-  --tap: transparent;
+  --accent: hsl(var(--accent-h) var(--accent-s) var(--accent-l));
+  --accent-2: hsl(calc(var(--accent-h) + 12) 62% 55%);
+  --accent-soft: hsl(var(--accent-h) 50% 75% / .22);
+
+  --ring: 0 0 0 3px hsl(var(--accent-h) 60% 60% / .28);
+
+  /* Shadows (theme will tune via --shadow-boost) */
+  --shadow-boost: 1;
+  --shadow-1: 0 10px 30px rgb(0 0 0 / calc(.10 * var(--shadow-boost)));
+  --shadow-2: 0 18px 55px rgb(0 0 0 / calc(.16 * var(--shadow-boost)));
+
+  /* Controls */
+  --btn-h: 52px;
+  --btn-radius: 999px;
+  --border-w: 1px;
 }
-
-/* Light mode */
-[data-theme="light"] {
-  --bg: #f6f4ef;
-  --surface: rgba(10,10,10,0.04);
-  --surface2: rgba(10,10,10,0.06);
-  --border: rgba(10,10,10,0.10);
-  --border2: rgba(10,10,10,0.14);
-
-  --ink: rgba(10,10,10,0.92);
-  --muted: rgba(10,10,10,0.64);
-  --muted2: rgba(10,10,10,0.48);
-
-  --accent: #b48a4a;
-  --accent2: #9d743a;
-  --accentSoft: rgba(180,138,74,0.14);
-
-  --shadow: 0 14px 34px rgba(10,10,10,0.10);
-  --shadowStrong: 0 18px 44px rgba(10,10,10,0.14);
-  --inset: inset 0 1px 0 rgba(255,255,255,0.65);
-
-  --btnInk: rgba(10,10,10,0.92);
-}
-
-/* base */
-html, body {
-  background: var(--bg);
-  color: var(--ink);
-}
-
-button, a, input, textarea, select {
-  -webkit-tap-highlight-color: var(--tap);
-}
-
-a { color: inherit; }
