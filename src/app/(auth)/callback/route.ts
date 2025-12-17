@@ -1,32 +1,20 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
+  const code = url.searchParams.get("code");
   const next = url.searchParams.get("next") || "/";
 
-  const cookieStore = await cookies();
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
-
-  // Supabase sender typisk ?code=... i URL’en
-  const code = url.searchParams.get("code");
+  // Exchange code -> session (sætter auth cookies)
   if (code) {
-    await supabase.auth.exchangeCodeForSession(code);
+    const supabase = createRouteHandlerClient({ cookies });
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      // fallback tilbage til login med fejl
+      return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(next)}&error=1`, url.origin));
+    }
   }
 
   return NextResponse.redirect(new URL(next, url.origin));
