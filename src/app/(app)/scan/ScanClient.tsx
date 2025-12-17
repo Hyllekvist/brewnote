@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import BrewmasterPanel from "./BrewmasterPanel";
+import RateBrewPanel from "./RateBrewPanel";
 import styles from "./ScanClient.module.css";
 
 type Match = {
@@ -408,7 +409,11 @@ export default function ScanClient() {
             dna={detail?.dna ?? null}
             missingText={missingText}
           />
-
+<RateBrewPanel
+      sessionId={result.sessionId}
+      productId={result.match?.product_id ?? null}
+      variantId={result.match?.variant_id ?? null}
+    />
           {/* Din eksisterende actions (inventory + edit) – behold dem, men nu efter panel */}
           <section className={styles.card}>
             <button className={styles.secondaryBtn} onClick={onSaveToInventory} disabled={busy || !canSaveInventory}>
