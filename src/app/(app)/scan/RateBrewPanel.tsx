@@ -62,7 +62,7 @@ export default function RateBrewPanel({ sessionId, productId, variantId, onSaved
       if (res.status === 401) throw new Error("Du skal være logget ind for at rate.");
       if (!res.ok) throw new Error(j?.error ?? text);
 
-      setMsg("Gemt ✅ (det gør BrewNote skarpere)");
+      setMsg("Gemt ✓ (du gør profilen skarpere)");
       onSaved?.();
     } catch (e: any) {
       setErr(e?.message ?? "Noget gik galt");
@@ -72,38 +72,59 @@ export default function RateBrewPanel({ sessionId, productId, variantId, onSaved
   }
 
   return (
-    <section className={styles.wrap} aria-label="Rate brew">
+    <section className={styles.wrap} aria-label="Learning">
       <div className={styles.head}>
-        <div className={styles.badge}>V7 · Learning</div>
+        <div className={styles.badge}>V9 · Learning</div>
         <div className={styles.title}>Hjælp BrewNote med at lære</div>
-        <div className={styles.sub}>10 sekunder nu = bedre anbefalinger og mere præcis DNA senere.</div>
+        <div className={styles.sub}>10 sekunder nu → mere præcis DNA og bedre anbefalinger.</div>
       </div>
 
       <div className={styles.grid}>
-        <div className={styles.slider}>
+        <div className={styles.sliderCard}>
           <div className={styles.row}>
             <span>Bitterness</span>
             <b>{bitterness}/10</b>
           </div>
-          <input type="range" min={1} max={10} value={bitterness} onChange={(e) => setBitterness(Number(e.target.value))} />
+          <input
+            className={styles.range}
+            type="range"
+            min={1}
+            max={10}
+            value={bitterness}
+            onChange={(e) => setBitterness(Number(e.target.value))}
+          />
           <div className={styles.hint}>Lav ← · → Høj</div>
         </div>
 
-        <div className={styles.slider}>
+        <div className={styles.sliderCard}>
           <div className={styles.row}>
             <span>Body</span>
             <b>{body}/10</b>
           </div>
-          <input type="range" min={1} max={10} value={body} onChange={(e) => setBody(Number(e.target.value))} />
+          <input
+            className={styles.range}
+            type="range"
+            min={1}
+            max={10}
+            value={body}
+            onChange={(e) => setBody(Number(e.target.value))}
+          />
           <div className={styles.hint}>Let ← · → Fyldig</div>
         </div>
 
-        <div className={styles.slider}>
+        <div className={styles.sliderCard}>
           <div className={styles.row}>
             <span>Clarity</span>
             <b>{clarity}/10</b>
           </div>
-          <input type="range" min={1} max={10} value={clarity} onChange={(e) => setClarity(Number(e.target.value))} />
+          <input
+            className={styles.range}
+            type="range"
+            min={1}
+            max={10}
+            value={clarity}
+            onChange={(e) => setClarity(Number(e.target.value))}
+          />
           <div className={styles.hint}>Uklar ← · → Ren</div>
         </div>
       </div>
@@ -111,9 +132,15 @@ export default function RateBrewPanel({ sessionId, productId, variantId, onSaved
       <div className={styles.choiceRow}>
         <div className={styles.choiceLabel}>Som forventet?</div>
         <div className={styles.choiceBtns}>
-          <button className={`${styles.chip} ${asExpected === true ? styles.chipOn : ""}`} onClick={() => setAsExpected(true)} type="button">Ja</button>
-          <button className={`${styles.chip} ${asExpected === false ? styles.chipOn : ""}`} onClick={() => setAsExpected(false)} type="button">Nej</button>
-          <button className={`${styles.chip} ${asExpected === null ? styles.chipOn : ""}`} onClick={() => setAsExpected(null)} type="button">Ved ikke</button>
+          <button className={`${styles.chip} ${asExpected === true ? styles.chipOn : ""}`} onClick={() => setAsExpected(true)} type="button">
+            Ja
+          </button>
+          <button className={`${styles.chip} ${asExpected === false ? styles.chipOn : ""}`} onClick={() => setAsExpected(false)} type="button">
+            Nej
+          </button>
+          <button className={`${styles.chip} ${asExpected === null ? styles.chipOn : ""}`} onClick={() => setAsExpected(null)} type="button">
+            Ved ikke
+          </button>
         </div>
       </div>
 
@@ -135,7 +162,7 @@ export default function RateBrewPanel({ sessionId, productId, variantId, onSaved
       )}
 
       <button className={styles.primary} onClick={onSubmit} disabled={!canSave}>
-        {busy ? "Gemmer…" : "Gem & forbedr anbefalinger"}
+        {busy ? "Gemmer…" : "Gem rating"}
       </button>
 
       {!variantId ? <div className={styles.muted}>(Der er ingen variant endnu — scan/match først.)</div> : null}
