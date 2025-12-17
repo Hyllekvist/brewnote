@@ -1,8 +1,61 @@
-:root{
-  --radius-sm:12px;--radius-md:14px;--radius-lg:18px;
-  --shadow-1:0 10px 30px rgba(0,0,0,.25);
-  --shadow-2:0 20px 60px rgba(0,0,0,.35);
-  --max:1120px;
-  --space-1:6px;--space-2:10px;--space-3:14px;--space-4:18px;--space-5:24px;--space-6:32px;
-  --fz-1:12px;--fz-2:14px;--fz-3:16px;--fz-4:18px;--fz-5:22px;--fz-6:30px;--fz-7:40px;
+:root {
+  /* theme tokens – default = dark */
+  --bg: #0b0c0f;
+  --surface: rgba(255,255,255,0.06);
+  --surface2: rgba(255,255,255,0.08);
+  --border: rgba(255,255,255,0.10);
+  --border2: rgba(255,255,255,0.14);
+
+  --ink: rgba(255,255,255,0.92);
+  --muted: rgba(255,255,255,0.70);
+  --muted2: rgba(255,255,255,0.55);
+
+  --accent: #c9a36b;         /* gold */
+  --accent2: #b89055;        /* deeper gold */
+  --accentSoft: rgba(201,163,107,0.14);
+
+  --shadow: 0 12px 30px rgba(0,0,0,0.35);
+  --shadowStrong: 0 18px 44px rgba(0,0,0,0.48);
+  --inset: inset 0 1px 0 rgba(255,255,255,0.06);
+
+  --radius: 18px;
+  --radiusSm: 14px;
+
+  --btnInk: rgba(20,20,20,0.95);
+  --tap: transparent;
 }
+
+/* Light mode */
+[data-theme="light"] {
+  --bg: #f6f4ef;
+  --surface: rgba(10,10,10,0.04);
+  --surface2: rgba(10,10,10,0.06);
+  --border: rgba(10,10,10,0.10);
+  --border2: rgba(10,10,10,0.14);
+
+  --ink: rgba(10,10,10,0.92);
+  --muted: rgba(10,10,10,0.64);
+  --muted2: rgba(10,10,10,0.48);
+
+  --accent: #b48a4a;
+  --accent2: #9d743a;
+  --accentSoft: rgba(180,138,74,0.14);
+
+  --shadow: 0 14px 34px rgba(10,10,10,0.10);
+  --shadowStrong: 0 18px 44px rgba(10,10,10,0.14);
+  --inset: inset 0 1px 0 rgba(255,255,255,0.65);
+
+  --btnInk: rgba(10,10,10,0.92);
+}
+
+/* base */
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+button, a, input, textarea, select {
+  -webkit-tap-highlight-color: var(--tap);
+}
+
+a { color: inherit; }
