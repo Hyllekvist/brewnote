@@ -63,16 +63,18 @@ function safeJson(text: string) {
     return null;
   }
 }
-
 const pct = (n: number) => `${Math.round((n ?? 0) * 100)}%`;
+
+type Stage = "idle" | "ready" | "scanning" | "done";
 
 export default function ScanClient() {
   const supabase = useMemo(() => supabaseBrowser(), []);
-
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  const [stage, setStage] = useState<Stage>("idle");
   const [busy, setBusy] = useState(false);
+
   const [result, setResult] = useState<ProcessResult | null>(null);
   const [detail, setDetail] = useState<VariantDetail | null>(null);
 
@@ -90,32 +92,15 @@ export default function ScanClient() {
     ean: "",
   });
 
-  const resultsRef = useRef<HTMLDivElement | null>(null);
+  const resultRef = useRef<HTMLDivElement | null>(null);
 
-  // ---- bottom nav overlap fix (sticky CTA over nav + safe-area) ----
-  // Justér hvis din BottomNav er højere/lavere.
-  const BOTTOM_NAV_PX = 84; // typisk 72-90 afhængigt af design
-  const stickyBottom = `calc(${BOTTOM_NAV_PX}px + env(safe-area-inset-bottom) + 12px)`;
-  const pageBottomPad = `calc(${BOTTOM_NAV_PX}px + env(safe-area-inset-bottom) + 140px)`;
-
+  // cleanup preview URL
   useEffect(() => {
-    if (!file) {
-      setPreviewUrl(null);
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
-
-  useEffect(() => {
-    if (!result) return;
-    // Scroll til resultater når scan er færdig, så man ikke “hænger” i upload-toppen.
-    const t = setTimeout(() => {
-      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 120);
-    return () => clearTimeout(t);
-  }, [result]);
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function loadEditFromResult(r: ProcessResult) {
     const ex = (r.extracted ?? {}) as Extracted;
@@ -141,25 +126,33 @@ export default function ScanClient() {
     setDetail(j as VariantDetail);
   }
 
-  function resetScan(keepFile = true) {
+  function onPickFile(f: File | null) {
     setErr(null);
     setSavedMsg(null);
+
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(f ? URL.createObjectURL(f) : null);
+
+    setFile(f);
+    setStage(f ? "ready" : "idle");
+
+    // når du vælger nyt billede starter vi “forfra”
     setResult(null);
     setDetail(null);
     setEditOpen(false);
-    if (!keepFile) setFile(null);
   }
 
   async function onScan() {
     setErr(null);
     setSavedMsg(null);
-    setResult(null);
     setDetail(null);
     if (!file) return;
 
     setBusy(true);
+    setStage("scanning");
+
     try {
-      // 1) start scan
+      // 1) start scan session
       const startRes = await fetch("/api/scan/start", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -207,8 +200,16 @@ export default function ScanClient() {
       if (data.status === "resolved" && data.match?.variant_id) {
         await loadDetails(data.match.variant_id);
       }
+
+      setStage("done");
+
+      // scroll til resultat (lille delay så DOM er der)
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 120);
     } catch (e: any) {
       setErr(e?.message ?? "Noget gik galt");
+      setStage(file ? "ready" : "idle");
     } finally {
       setBusy(false);
     }
@@ -268,6 +269,10 @@ export default function ScanClient() {
 
       if (data.status === "resolved" && data.match?.variant_id) await loadDetails(data.match.variant_id);
       else setDetail(null);
+
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 120);
     } catch (e: any) {
       setErr(e?.message ?? "Noget gik galt");
     } finally {
@@ -305,6 +310,10 @@ export default function ScanClient() {
 
       if (j?.match?.variant_id) await loadDetails(j.match.variant_id);
       setEditOpen(false);
+
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 120);
     } catch (e: any) {
       setErr(e?.message ?? "Noget gik galt");
     } finally {
@@ -332,7 +341,6 @@ export default function ScanClient() {
 
       const text = await res.text();
       const j = safeJson(text);
-
       if (res.status === 401) throw new Error("Du skal være logget ind for at gemme i inventory.");
       if (!res.ok) throw new Error(`inventory ${res.status}: ${j?.error ?? text}`);
 
@@ -348,88 +356,111 @@ export default function ScanClient() {
   const isResolved = result?.status === "resolved";
   const canSaveInventory = isResolved && (detail?.variant?.id || result?.match?.variant_id);
 
-  return (
-    <div className={styles.page} style={{ paddingBottom: pageBottomPad }}>
-      {/* Vigtigt: Ingen ekstra “Coffee & Tea” header her – den kommer fra layout.
-         Her laver vi kun scan-hero/indhold. */}
+  // Sticky CTA: vis kun når det giver mening
+  const showSticky = stage !== "idle" && !!file;
+  const stickyLabel = stage === "scanning" ? "Scanner…" : stage === "done" ? "Scan igen" : "Scan";
+  const stickyDisabled = !file || busy;
 
+  function onStickyClick() {
+    if (!file) return;
+    // hvis vi allerede har resultat: “Scan igen” = kør scan på samme billede igen
+    onScan();
+  }
+
+  return (
+    <div className={styles.page}>
       <header className={styles.hero}>
         <h1 className={styles.h1}>Scan kaffe/te</h1>
         <p className={styles.sub}>Scan posen → match produkt → gem</p>
       </header>
 
-      <section className={`${styles.card} ${styles.scanCard} ${busy ? styles.scanning : ""}`}>
-        <div className={styles.scanTop}>
-          <div className={styles.scanBadge}>AI Scan</div>
-          <div className={styles.scanTitle}>Peg kameraet mod posen</div>
-          <div className={styles.scanHint}>Godt lys. Skarp front. Ingen glare.</div>
-        </div>
+      {/* Scan card: stor før scan, kompakt efter scan */}
+      {stage !== "done" ? (
+        <section className={`${styles.card} ${styles.scanCard} ${busy ? styles.scanning : ""}`}>
+          <div className={styles.scanTop}>
+            <div className={styles.scanBadge}>AI Scan</div>
+            <div className={styles.scanTitle}>Peg kameraet mod posen</div>
+            <div className={styles.scanHint}>Godt lys. Skarp front. Ingen glare.</div>
+          </div>
 
-        <div className={styles.scanFrame}>
-          {/* Preview når fil er valgt */}
-          {previewUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={previewUrl}
-              alt="Valgt billede"
-              className={styles.previewImg}
-              draggable={false}
-            />
-          ) : null}
+          <div className={styles.scanFrame}>
+            <div className={styles.frameIcon} aria-hidden="true">
+              ⌁
+            </div>
+            {busy && <div className={styles.scanSweep} aria-hidden="true" />}
+          </div>
 
-          <div className={styles.frameCorners} aria-hidden="true" />
-          {!previewUrl ? <div className={styles.frameIcon} aria-hidden="true">⌁</div> : null}
-          {busy && <div className={styles.scanSweep} aria-hidden="true" />}
-        </div>
+          <div className={styles.controls}>
+            <label className={styles.fileBtn}>
+              {file ? "Skift billede" : "Vælg billede"}
+              <input
+                className={styles.fileInput}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
 
-        <div className={styles.controls}>
-          <label className={styles.fileBtn}>
-            Vælg billede
-            <input
-              className={styles.fileInput}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              disabled={busy}
-              onChange={(e) => {
-                const f = e.target.files?.[0] ?? null;
-                setFile(f);
-                // Hvis man vælger nyt billede efter et resultat: reset result, men behold UI
-                setErr(null);
-                setSavedMsg(null);
-                setResult(null);
-                setDetail(null);
-                setEditOpen(false);
-              }}
-            />
-          </label>
-
-          <div className={styles.fileMeta}>
-            <div className={styles.fileName}>{file ? file.name : "Ingen fil valgt"}</div>
-            <div className={styles.fileSub}>
-              {file ? "Klar til scan" : "JPG/PNG · Mobilkamera anbefales"}
+            <div className={styles.fileMeta}>
+              <div className={styles.fileName}>{file ? file.name : "Ingen fil valgt"}</div>
+              <div className={styles.fileSub}>JPG/PNG · Mobilkamera anbefales</div>
             </div>
           </div>
-        </div>
 
-        <div className={styles.scanActionsRow}>
           <button className={styles.primaryBtn} onClick={onScan} disabled={!file || busy}>
             {busy ? "Scanner…" : "Scan"}
           </button>
+        </section>
+      ) : (
+        <section className={`${styles.card} ${styles.scanCard}`}>
+          <div className={styles.scanTop}>
+            <div className={styles.scanBadge}>Klar</div>
+            <div className={styles.scanTitle}>Billede valgt</div>
+            <div className={styles.scanHint}>Du kan scanne igen eller skifte billede.</div>
+          </div>
 
-          {(result || detail) && (
-            <button
-              className={styles.ghostBtn}
-              type="button"
-              onClick={() => resetScan(true)}
-              disabled={busy}
-              aria-label="Scan igen"
-            >
-              Scan igen
-            </button>
+          {/* preview (simpelt, uden ekstra CSS – browser default) */}
+          {previewUrl ? (
+            <div className={styles.scanFrame} style={{ padding: 0 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={previewUrl}
+                alt="Preview"
+                style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 16 }}
+              />
+            </div>
+          ) : (
+            <div className={styles.scanFrame}>
+              <div className={styles.frameIcon} aria-hidden="true">
+                ⌁
+              </div>
+            </div>
           )}
-        </div>
-      </section>
+
+          <div className={styles.controls}>
+            <label className={styles.fileBtn}>
+              Skift billede
+              <input
+                className={styles.fileInput}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
+
+            <div className={styles.fileMeta}>
+              <div className={styles.fileName}>{file ? file.name : "Ingen fil valgt"}</div>
+              <div className={styles.fileSub}>Tip: front af posen, god belysning.</div>
+            </div>
+          </div>
+
+          <button className={styles.primaryBtn} onClick={onScan} disabled={!file || busy}>
+            {busy ? "Scanner…" : "Scan igen"}
+          </button>
+        </section>
+      )}
 
       {(err || savedMsg) && (
         <div className={styles.noticeWrap}>
@@ -439,7 +470,7 @@ export default function ScanClient() {
       )}
 
       {result && (
-        <div ref={resultsRef}>
+        <div ref={resultRef}>
           <div className={styles.pillsRow}>
             <div className={styles.pillStrong}>Scan færdig · {pct(confidence)}</div>
             <div className={styles.pillSoft}>
@@ -517,9 +548,7 @@ export default function ScanClient() {
                 <div className={styles.infoValue}>
                   <b>{detail.brew.method}</b> · Grind: {detail.brew.grind} · Ratio:{" "}
                   {detail.brew.ratio} · Temp: {detail.brew.temp_c}°C
-                  {detail.brew.notes ? (
-                    <div className={styles.infoNote}>{detail.brew.notes}</div>
-                  ) : null}
+                  {detail.brew.notes ? <div className={styles.infoNote}>{detail.brew.notes}</div> : null}
                 </div>
               </div>
 
@@ -543,26 +572,17 @@ export default function ScanClient() {
               <div className={styles.formGrid}>
                 <label className={styles.field}>
                   <span>Brand</span>
-                  <input
-                    value={edit.brand ?? ""}
-                    onChange={(e) => setEdit((p) => ({ ...p, brand: e.target.value }))}
-                  />
+                  <input value={edit.brand ?? ""} onChange={(e) => setEdit((p) => ({ ...p, brand: e.target.value }))} />
                 </label>
 
                 <label className={styles.field}>
                   <span>Line</span>
-                  <input
-                    value={edit.line ?? ""}
-                    onChange={(e) => setEdit((p) => ({ ...p, line: e.target.value }))}
-                  />
+                  <input value={edit.line ?? ""} onChange={(e) => setEdit((p) => ({ ...p, line: e.target.value }))} />
                 </label>
 
                 <label className={styles.field}>
                   <span>Name</span>
-                  <input
-                    value={edit.name ?? ""}
-                    onChange={(e) => setEdit((p) => ({ ...p, name: e.target.value }))}
-                  />
+                  <input value={edit.name ?? ""} onChange={(e) => setEdit((p) => ({ ...p, name: e.target.value }))} />
                 </label>
 
                 <label className={styles.field}>
@@ -608,19 +628,10 @@ export default function ScanClient() {
                 </label>
 
                 <div className={styles.actionsRow}>
-                  <button
-                    className={styles.secondaryBtn}
-                    onClick={onSaveExtractedAndRetry}
-                    disabled={busy || !result?.sessionId}
-                  >
+                  <button className={styles.secondaryBtn} onClick={onSaveExtractedAndRetry} disabled={busy || !result?.sessionId}>
                     {busy ? "Arbejder…" : "Gem & match igen"}
                   </button>
-
-                  <button
-                    className={styles.ghostBtn}
-                    onClick={onCreateAsNewProduct}
-                    disabled={busy || !result?.sessionId}
-                  >
+                  <button className={styles.ghostBtn} onClick={onCreateAsNewProduct} disabled={busy || !result?.sessionId}>
                     {busy ? "Opretter…" : "Opret som nyt produkt"}
                   </button>
                 </div>
@@ -630,12 +641,13 @@ export default function ScanClient() {
         </div>
       )}
 
-      {/* Sticky CTA: ligger altid OVER bundnavet nu */}
-      <div className={styles.sticky} style={{ bottom: stickyBottom }}>
-        <button className={styles.stickyBtn} onClick={onScan} disabled={!file || busy}>
-          {busy ? "Scanner…" : "Scan"}
-        </button>
-      </div>
+      {showSticky && (
+        <div className={styles.sticky}>
+          <button className={styles.stickyBtn} onClick={onStickyClick} disabled={stickyDisabled}>
+            {stickyLabel}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
