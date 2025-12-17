@@ -1,133 +1,138 @@
-/* =========================================================
-   BrewNote — Scan UI v2 (CSS Modules SAFE)
-   Tokens ligger i globals.css på html[data-theme]
-   ========================================================= */
+/* src/app/scan/ScanClient.module.css */
 
 .page {
-  min-height: 100vh;
-  background: var(--bg);
-  color: var(--ink);
-padding: 16px 14px calc(140px + 92px + env(safe-area-inset-bottom));
+  /* mere “bredde” på mobilen: mindre side-padding */
+  padding: 14px 12px 110px;
+  max-width: 720px;
+  margin: 0 auto;
 }
 
-/* ---------- Hero ---------- */
-
-.hero {
-  margin-bottom: 14px;
+@media (min-width: 520px) {
+  .page {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
 }
 
-.h1 {
-  margin: 0;
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.sub {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 14px;
-}
-
-/* ---------- Card ---------- */
-
+/* konsekvent vertical rhythm */
 .card {
-  background: var(--glass);
-  border: 1px solid var(--stroke);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 16px;
-  margin-top: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 18px;
+  padding: 16px;                 /* ↓ mindre padding = mere content width */
+  box-shadow:
+    0 12px 30px rgba(0,0,0,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  margin: 0 0 12px 0;
 }
 
-/* ---------- Scan card ---------- */
-
+/* scan card */
 .scanCard {
-  position: relative;
   overflow: hidden;
 }
 
+.scanning {
+  border-color: rgba(201, 163, 107, 0.35);
+}
+
+/* top */
 .scanTop {
-  text-align: center;
+  display: grid;
+  gap: 6px;
   margin-bottom: 12px;
 }
 
 .scanBadge {
-  display: inline-block;
-  padding: 4px 10px;
+  width: fit-content;
+  padding: 6px 10px;
   border-radius: 999px;
-  font-size: 11px;
-  letter-spacing: 0.08em;
+  font-size: 12px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  background: var(--panel2);
-  color: var(--muted);
+  color: rgba(255,255,255,0.75);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
 }
 
 .scanTitle {
-  margin-top: 8px;
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 22px;
+  line-height: 1.12;
+  font-weight: 750;
+  margin: 0;
 }
 
 .scanHint {
-  margin-top: 4px;
   font-size: 13px;
-  color: var(--muted);
+  color: rgba(255,255,255,0.70);
 }
 
-/* ---------- Scan frame ---------- */
-
+/* frame */
 .scanFrame {
   position: relative;
-  height: 220px;
-  margin: 14px 0;
-  border-radius: var(--radius2);
-  background: rgba(0, 0, 0, 0.22);
-  border: 1px dashed var(--stroke2);
+  border-radius: 16px;
+  border: 1px dashed rgba(255,255,255,0.16);
+  background: rgba(0,0,0,0.20);
+  aspect-ratio: 1 / 1;
   display: grid;
   place-items: center;
   overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.previewImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .frameIcon {
-  font-size: 22px;
-  opacity: 0.6;
-}
-
-.scanning .scanFrame {
-  border-color: var(--accent);
+  font-size: 34px;
+  opacity: 0.55;
 }
 
 .scanSweep {
   position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(202, 163, 107, 0.25), transparent);
-  animation: sweep 1.4s linear infinite;
+  inset: -30%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(201,163,107,0.10),
+    transparent
+  );
+  transform: translateX(-60%);
+  animation: sweep 1.2s ease-in-out infinite;
+  pointer-events: none;
 }
 
 @keyframes sweep {
-  from { transform: translateX(-100%); }
-  to   { transform: translateX(100%); }
+  0% { transform: translateX(-60%); }
+  100% { transform: translateX(60%); }
 }
 
-/* ---------- Controls ---------- */
-
+/* controls */
 .controls {
   display: grid;
   gap: 10px;
+  margin-bottom: 12px;
 }
 
 .fileBtn {
   display: inline-flex;
-  align-items: center;
   justify-content: center;
-  padding: 12px 14px;
+  align-items: center;
+  padding: 14px 14px;
   border-radius: 999px;
-  background: var(--panel2);
-  border: 1px solid var(--stroke);
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.92);
+  font-weight: 650;
   cursor: pointer;
-  font-weight: 600;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fileBtn:active {
+  transform: translateY(1px);
 }
 
 .fileInput {
@@ -140,23 +145,35 @@ padding: 16px 14px calc(140px + 92px + env(safe-area-inset-bottom));
 
 .fileName {
   font-size: 13px;
+  color: rgba(255,255,255,0.85);
 }
 
 .fileSub {
   font-size: 12px;
-  color: var(--muted2);
+  color: rgba(255,255,255,0.55);
+  margin-top: 2px;
 }
 
-/* ---------- Buttons ---------- */
+/* primary button */
+.primaryBtn,
+.secondaryBtn,
+.ghostBtn,
+.stickyBtn,
+.accordionHeader {
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+  border: none;
+  outline: none;
+  color: rgba(20,20,20,0.95); /* vigtig: fjerner “blå” tekst på iOS */
+}
 
 .primaryBtn {
-  margin-top: 10px;
-  padding: 14px;
+  width: 100%;
+  padding: 14px 16px;
   border-radius: 999px;
-  border: none;
-  background: linear-gradient(180deg, var(--accent), var(--accent2));
-  color: #0b0d10;
-  font-weight: 800;
+  font-weight: 750;
+  background: linear-gradient(180deg, #d4b176, #b89055);
+  box-shadow: 0 12px 26px rgba(0,0,0,0.35);
 }
 
 .primaryBtn:disabled {
@@ -164,146 +181,70 @@ padding: 16px 14px calc(140px + 92px + env(safe-area-inset-bottom));
 }
 
 .secondaryBtn {
-  margin-top: 10px;
-  padding: 12px 14px;
+  width: 100%;
+  padding: 14px 16px;
   border-radius: 999px;
-  border: 1px solid var(--stroke);
-  background: var(--panel);
-  color: var(--ink);
   font-weight: 700;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.92);
+}
+
+.secondaryBtn:disabled {
+  opacity: 0.55;
 }
 
 .ghostBtn {
-  padding: 12px 14px;
+  flex: 1;
+  padding: 14px 16px;
   border-radius: 999px;
-  background: transparent;
-  border: none;
-  color: var(--accent);
   font-weight: 700;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.90);
 }
 
-/* ---------- Notices ---------- */
-
 .noticeWrap {
-  margin-top: 12px;
   display: grid;
-  gap: 8px;
+  gap: 10px;
+  margin: 0 0 12px 0;
+}
+
+.noticeError,
+.noticeOk {
+  border-radius: 14px;
+  padding: 12px 12px;
+  font-size: 13px;
+  border: 1px solid rgba(255,255,255,0.10);
 }
 
 .noticeError {
-  color: var(--bad);
-  font-weight: 600;
+  background: rgba(255, 80, 80, 0.12);
+  color: rgba(255,255,255,0.92);
 }
 
 .noticeOk {
-  color: var(--good);
-  font-weight: 600;
+  background: rgba(90, 200, 120, 0.12);
+  color: rgba(255,255,255,0.92);
 }
 
-/* ---------- Pills ---------- */
-
-.pillsRow {
-  display: flex;
-  gap: 8px;
-  margin-top: 14px;
-  flex-wrap: wrap;
-}
-
-.pillStrong {
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(31, 169, 123, 0.18);
-  color: var(--good);
-  font-weight: 700;
-  font-size: 13px;
-}
-
-.pillSoft {
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: var(--panel2);
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-/* ---------- Product ---------- */
-
-.productTitle {
-  font-size: 20px;
-  font-weight: 800;
-}
-
-.metaGrid {
-  margin-top: 10px;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.metaItem {
-  background: var(--panel2);
-  border-radius: 12px;
-  padding: 10px;
-  border: 1px solid var(--stroke);
-}
-
-.metaItem span {
-  display: block;
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 2px;
-}
-
-/* ---------- Info ---------- */
-
-.sectionTitle {
-  font-weight: 800;
-  margin-bottom: 8px;
-}
-
-.infoRow {
-  display: grid;
-  grid-template-columns: 90px 1fr;
-  gap: 10px;
-  padding: 10px 0;
-  border-top: 1px solid var(--stroke);
-}
-
-.infoLabel {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.infoValue {
-  font-size: 14px;
-}
-
-.infoNote {
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--muted2);
-}
-
-/* ---------- Accordion ---------- */
-
+/* accordion */
 .accordionHeader {
   width: 100%;
-  background: var(--panel);
-  border: 1px solid var(--stroke);
-  border-radius: 999px;
-  padding: 12px 16px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  font-weight: 800;
-  color: var(--ink);
+  padding: 14px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.92);
+  font-weight: 750;
 }
 
 .chev {
-  opacity: 0.65;
+  opacity: 0.75;
 }
-
-/* ---------- Form ---------- */
 
 .formGrid {
   margin-top: 12px;
@@ -314,142 +255,59 @@ padding: 16px 14px calc(140px + 92px + env(safe-area-inset-bottom));
 .field {
   display: grid;
   gap: 6px;
-}
-
-.field span {
   font-size: 12px;
-  color: var(--muted);
+  color: rgba(255,255,255,0.70);
 }
 
 .field input,
-.field select {
+.field select,
+.field textarea {
+  width: 100%;
   padding: 12px 12px;
   border-radius: 12px;
-  border: 1px solid var(--stroke);
-  background: var(--panel);
-  color: var(--ink);
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.92);
+  outline: none;
 }
 
-/* ---------- Actions ---------- */
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: rgba(201,163,107,0.50);
+  box-shadow: 0 0 0 3px rgba(201,163,107,0.14);
+}
 
 .actionsRow {
   display: flex;
   gap: 10px;
-  margin-top: 10px;
-  flex-wrap: wrap;
+  margin-top: 6px;
 }
 
-/* ---------- Sticky (over bottom nav) ---------- */
-
+/* sticky */
 .sticky {
   position: fixed;
-  left: 16px;
-  right: 16px;
-
-  /* 72px er typisk bottom nav højde + safe area + lidt luft */
-  bottom: calc(16px + 92px + env(safe-area-inset-bottom));
-  z-index: 50;
-
-  pointer-events: none; /* så den ikke “spiser” scroll/taps udenfor knappen */
+  left: 0;
+  right: 0;
+  bottom: 74px; /* over bottom nav */
+  padding: 10px 12px;
+  z-index: 20;
+  pointer-events: none;
 }
 
 .stickyBtn {
   pointer-events: auto;
   width: 100%;
-  padding: 14px;
-  border-radius: 999px;
-  border: none;
-  background: linear-gradient(180deg, var(--accent), var(--accent2));
-  font-weight: 800;
-  color: #0b0d10;
-  box-shadow: var(--shadow2);
-}
-
-/* v7: giver plads når sticky er synlig */
-.hasSticky {
-  padding-bottom: 140px;
-}
-
-/* v7: små enter-animations (uden at være flashy) */
-.enter {
-  animation: fadeUp 240ms ease-out both;
-}
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .enter { animation: none; }
-}
-
-/* gør preview pænere og “app-like” */
-.previewImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: var(--radius2);
+  max-width: 720px;
+  margin: 0 auto;
   display: block;
-}
-
-/* v7: sticky må ikke virke chunky */
-.sticky {
-  position: fixed;
-  left: 16px;
-  right: 16px;
-  bottom: 16px;
-  z-index: 50;
-  pointer-events: none;
-}
-.stickyBtn {
-  pointer-events: auto;
-}
-
-.page {
-  padding-bottom: 92px; /* plads til bottom nav */
-}
-
-.results {
-  display: grid;
-  gap: 14px;
-}
-
-/* scan card actions row */
-.scanActions {
-  margin-top: 12px;
-  display: grid;
-  gap: 10px;
-}
-
-.tertiaryBtn {
-  width: 100%;
-  border-radius: 999px;
-  padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.92);
-  font-weight: 600;
-}
-
-.noticeWrap {
-  margin: 12px 0;
-}
-
-/* sticky — hold den “lav”, og undgå at den føles som en blok */
-.sticky {
-  position: fixed;
-  left: 12px;
-  right: 12px;
-  bottom: calc(74px + env(safe-area-inset-bottom)); /* over bottom nav */
-  z-index: 40;
-  pointer-events: none;
-}
-
-.stickyBtn {
-  pointer-events: auto;
-  width: 100%;
-  border-radius: 999px;
   padding: 14px 16px;
-  font-weight: 700;
-  box-shadow: 0 14px 40px rgba(0,0,0,0.55);
+  border-radius: 999px;
+  font-weight: 800;
+  background: linear-gradient(180deg, #d4b176, #b89055);
+  box-shadow: 0 16px 36px rgba(0,0,0,0.45);
+}
+
+.stickyBtn:disabled {
+  opacity: 0.55;
 }
