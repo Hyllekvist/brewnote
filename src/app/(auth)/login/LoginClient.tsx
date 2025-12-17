@@ -1,69 +1,33 @@
 "use client";
 
+import { useSearchParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
-import styles from "./LoginClient.module.css";
 
 export default function LoginClient() {
   const supabase = useMemo(() => supabaseBrowser(), []);
+  const search = useSearchParams();
   const router = useRouter();
-  const sp = useSearchParams();
 
-  const next = sp.get("next") || "/scan";
+  const next = search.get("next") || "/";
 
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  async function signInMagicLink() {
+  async function onMagicLink() {
     setErr(null);
     setMsg(null);
     setBusy(true);
-    try {
-      const e = email.trim();
-      if (!e) throw new Error("Indtast email.");
 
+    try {
       const { error } = await supabase.auth.signInWithOtp({
-        email: e,
-        options: {
-          // efter login lander vi tilbage hvor vi kom fra
-          emailRedirectTo:
-            typeof window !== "undefined"
-              ? `${window.location.origin}${next}`
-              : undefined,
-        },
+        email,
+        options: { emailRedirectTo: `${window.location.origin}${next}` },
       });
-
       if (error) throw new Error(error.message);
-      setMsg("Tjek din email — vi har sendt et login-link ✅");
-    } catch (e: any) {
-      setErr(e?.message ?? "Noget gik galt");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function signInPassword() {
-    setErr(null);
-    setMsg(null);
-    setBusy(true);
-    try {
-      const e = email.trim();
-      if (!e) throw new Error("Indtast email.");
-      if (!password) throw new Error("Indtast password.");
-
-      const { error } = await supabase.auth.signInWithPassword({
-        email: e,
-        password,
-      });
-
-      if (error) throw new Error(error.message);
-      router.push(next);
-      router.refresh();
+      setMsg("Tjek din email for login-link ✅");
     } catch (e: any) {
       setErr(e?.message ?? "Noget gik galt");
     } finally {
@@ -72,65 +36,28 @@ export default function LoginClient() {
   }
 
   return (
-    <div className={styles.page}>
-      <div className={styles.card}>
-        <div className={styles.head}>
-          <div className={styles.badge}>BrewNote</div>
-          <h1 className={styles.h1}>Log ind</h1>
-          <p className={styles.sub}>
-            Log ind for at gemme i inventory og rate brews.
-          </p>
-        </div>
+    <div style={{ padding: 24 }}>
+      <h1 style={{ margin: 0 }}>Login</h1>
+      <p style={{ opacity: 0.7 }}>Få et magic link på email.</p>
 
-        <label className={styles.field}>
-          <span>Email</span>
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="dig@domain.dk"
-            inputMode="email"
-            autoComplete="email"
-          />
-        </label>
+      <input
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="din@email.dk"
+        inputMode="email"
+        style={{ width: "100%", padding: 12, borderRadius: 12, marginTop: 10 }}
+      />
 
-        <label className={styles.field}>
-          <span>Password (valgfri)</span>
-          <input
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            type="password"
-            autoComplete="current-password"
-          />
-        </label>
+      <button
+        onClick={onMagicLink}
+        disabled={busy || !email.includes("@")}
+        style={{ width: "100%", padding: 12, borderRadius: 999, marginTop: 12 }}
+      >
+        {busy ? "Sender…" : "Send login-link"}
+      </button>
 
-        {(err || msg) && (
-          <div className={styles.msg}>
-            {err ? <div className={styles.err}>{err}</div> : null}
-            {msg ? <div className={styles.ok}>{msg}</div> : null}
-          </div>
-        )}
-
-        <div className={styles.actions}>
-          <button className={styles.primary} onClick={signInMagicLink} disabled={busy}>
-            {busy ? "Sender…" : "Send magic link"}
-          </button>
-
-          <button className={styles.secondary} onClick={signInPassword} disabled={busy}>
-            {busy ? "Logger ind…" : "Log ind med password"}
-          </button>
-        </div>
-
-        <div className={styles.back}>
-          <button
-            className={styles.ghost}
-            type="button"
-            onClick={() => router.push(next)}
-          >
-            Tilbage
-          </button>
-        </div>
-      </div>
+      {err ? <div style={{ color: "#ff4d5e", marginTop: 10 }}>{err}</div> : null}
+      {msg ? <div style={{ color: "#1fa97b", marginTop: 10 }}>{msg}</div> : null}
     </div>
   );
 }
