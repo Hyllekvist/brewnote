@@ -1,10 +1,101 @@
-html[data-theme="dark"]{
-  --bg:#0b0d10;--panel:rgba(255,255,255,.06);--panel2:rgba(255,255,255,.09);
-  --ink:rgba(255,255,255,.92);--muted:rgba(255,255,255,.68);--line:rgba(255,255,255,.12);
-  --accent1:#ff9966;--accent2:#ff5e62;--ok:#21c07a;
+/* src/styles/themes.css */
+
+/* -------- Base (shared semantic vars) -------- */
+:root {
+  color-scheme: light dark;
+
+  /* Semantic */
+  --bg: #0b0c0f;
+  --bg2: #0f1116;
+
+  --card: rgb(255 255 255 / .06);
+  --card2: rgb(255 255 255 / .04);
+
+  --border: rgb(255 255 255 / .10);
+  --border2: rgb(255 255 255 / .08);
+
+  --text: rgb(255 255 255 / .92);
+  --muted: rgb(255 255 255 / .62);
+  --muted2: rgb(255 255 255 / .48);
+
+  --link: var(--accent);
+  --link-hover: hsl(var(--accent-h) 70% 65%);
+
+  --chip: rgb(255 255 255 / .08);
+  --chip-on: hsl(var(--accent-h) 55% 55% / .18);
+
+  --track: rgb(255 255 255 / .10);
+  --thumb: hsl(var(--accent-h) 55% 60%);
+
+  /* “wow” backdrop glow (dark default) */
+  --glow-1: radial-gradient(900px 520px at 50% -120px, hsl(var(--accent-h) 70% 55% / .26), transparent 60%);
+  --glow-2: radial-gradient(520px 360px at 20% 12%, hsl(calc(var(--accent-h) + 18) 70% 55% / .14), transparent 60%);
 }
-html[data-theme="light"]{
-  --bg:#ffffff;--panel:rgba(10,12,16,.05);--panel2:rgba(10,12,16,.08);
-  --ink:rgba(10,12,16,.92);--muted:rgba(10,12,16,.62);--line:rgba(10,12,16,.10);
-  --accent1:#ff9966;--accent2:#ff5e62;--ok:#0f9d5c;
+
+/* -------- Dark theme -------- */
+html[data-theme="dark"] {
+  --bg: #0b0c0f;
+  --bg2: #0f1116;
+
+  --card: rgb(255 255 255 / .06);
+  --card2: rgb(255 255 255 / .04);
+
+  --border: rgb(255 255 255 / .12);
+  --border2: rgb(255 255 255 / .08);
+
+  --text: rgb(255 255 255 / .92);
+  --muted: rgb(255 255 255 / .64);
+  --muted2: rgb(255 255 255 / .48);
+
+  --shadow-boost: 1.15;
+}
+
+/* -------- Light theme -------- */
+html[data-theme="light"] {
+  --bg: #f6f7fb;
+  --bg2: #eef1f7;
+
+  --card: rgb(0 0 0 / .045);
+  --card2: rgb(0 0 0 / .035);
+
+  --border: rgb(0 0 0 / .10);
+  --border2: rgb(0 0 0 / .08);
+
+  --text: rgb(10 12 16 / .92);
+  --muted: rgb(10 12 16 / .60);
+  --muted2: rgb(10 12 16 / .46);
+
+  /* Light “wow” glow */
+  --glow-1: radial-gradient(900px 520px at 50% -160px, hsl(var(--accent-h) 80% 70% / .40), transparent 62%);
+  --glow-2: radial-gradient(560px 420px at 20% 10%, hsl(calc(var(--accent-h) + 18) 80% 70% / .24), transparent 62%);
+
+  --shadow-boost: .65;
+}
+
+/* -------- Global element polish (fix blå tekst + iOS defaults) -------- */
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+body {
+  /* wow background */
+  background-image: var(--glow-1), var(--glow-2), linear-gradient(180deg, var(--bg), var(--bg2));
+  background-attachment: fixed;
+}
+
+/* Links - stop “random blue” */
+a, a:visited {
+  color: var(--link);
+  text-decoration: none;
+}
+a:hover { color: var(--link-hover); }
+
+/* iOS input/link blue + focus */
+:focus-visible { outline: none; box-shadow: var(--ring); border-radius: 12px; }
+
+/* Buttons */
+button {
+  -webkit-tap-highlight-color: transparent;
 }
