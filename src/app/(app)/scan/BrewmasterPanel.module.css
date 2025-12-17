@@ -1,0 +1,236 @@
+.wrap {
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.topRow {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+}
+
+:global(html[data-theme="light"]) .badge {
+  border-color: rgba(10,12,16,0.10);
+  background: rgba(10,12,16,0.04);
+}
+
+.conf {
+  display: grid;
+  gap: 6px;
+}
+
+.confTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.meter {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.07);
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+:global(html[data-theme="light"]) .meter {
+  background: rgba(10,12,16,0.05);
+  border-color: rgba(10,12,16,0.10);
+}
+
+.meterFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(202,163,107,0.85), rgba(169,128,74,0.95));
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 820;
+  letter-spacing: -0.02em;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fact {
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.06);
+}
+
+:global(html[data-theme="light"]) .fact {
+  border-color: rgba(10,12,16,0.10);
+  background: rgba(10,12,16,0.04);
+}
+
+.fact span {
+  display: block;
+  font-size: 12px;
+  opacity: 0.65;
+  margin-bottom: 2px;
+}
+
+.grid {
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 860px) {
+  .grid {
+    grid-template-columns: 1.1fr 0.9fr;
+    align-items: start;
+  }
+}
+
+.card {
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.06);
+}
+
+:global(html[data-theme="light"]) .card {
+  border-color: rgba(10,12,16,0.10);
+  background: rgba(10,12,16,0.04);
+}
+
+.cardTitle {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.7;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.profileRow {
+  display: grid;
+  grid-template-columns: 92px 1fr 56px;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.profileLabel {
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.profileBar {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.07);
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+:global(html[data-theme="light"]) .profileBar {
+  background: rgba(10,12,16,0.05);
+  border-color: rgba(10,12,16,0.10);
+}
+
+.profileFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(202,163,107,0.80), rgba(169,128,74,0.95));
+}
+
+.profileValue {
+  text-align: right;
+  font-size: 13px;
+  opacity: 0.9;
+  font-weight: 700;
+}
+
+.profileHint {
+  margin-top: 10px;
+  font-size: 12px;
+  opacity: 0.65;
+  line-height: 1.35;
+}
+
+.brewLine {
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.brewNotes {
+  margin-top: 8px;
+  font-size: 13px;
+  opacity: 0.75;
+  line-height: 1.45;
+}
+
+.empty {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.insights {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  opacity: 0.85;
+}
+
+.insights li {
+  margin: 6px 0;
+}
+
+.krow {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(255,255,255,0.10);
+}
+
+:global(html[data-theme="light"]) .krow {
+  border-top-color: rgba(10,12,16,0.10);
+}
+
+.klabel {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.kvalue {
+  font-size: 13px;
+  line-height: 1.4;
+  opacity: 0.95;
+}
+
+.missing {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.06);
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+:global(html[data-theme="light"]) .missing {
+  border-color: rgba(10,12,16,0.10);
+  background: rgba(10,12,16,0.04);
+}
