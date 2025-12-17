@@ -69,6 +69,7 @@ type Stage = "idle" | "ready" | "scanning" | "done";
 
 export default function ScanClient() {
   const supabase = useMemo(() => supabaseBrowser(), []);
+
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -99,8 +100,7 @@ export default function ScanClient() {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [previewUrl]);
 
   function loadEditFromResult(r: ProcessResult) {
     const ex = (r.extracted ?? {}) as Extracted;
@@ -136,7 +136,7 @@ export default function ScanClient() {
     setFile(f);
     setStage(f ? "ready" : "idle");
 
-    // når du vælger nyt billede starter vi “forfra”
+    // nyt billede = reset flow
     setResult(null);
     setDetail(null);
     setEditOpen(false);
@@ -172,12 +172,10 @@ export default function ScanClient() {
       if (!sessionId || !uploadPath) throw new Error("start: missing sessionId/uploadPath");
 
       // 2) upload image
-      const { error: upErr } = await supabase.storage
-        .from("scans")
-        .upload(uploadPath, file, {
-          contentType: file.type || "image/jpeg",
-          upsert: true,
-        });
+      const { error: upErr } = await supabase.storage.from("scans").upload(uploadPath, file, {
+        contentType: file.type || "image/jpeg",
+        upsert: true,
+      });
 
       if (upErr) throw new Error(`upload: ${upErr.message}`);
 
@@ -363,9 +361,51 @@ export default function ScanClient() {
 
   function onStickyClick() {
     if (!file) return;
-    // hvis vi allerede har resultat: “Scan igen” = kør scan på samme billede igen
     onScan();
   }
+
+  const bm = useMemo(() => {
+    const m = result?.match;
+    const brew = detail?.brew;
+
+    const tips: string[] = [];
+    if (m?.intensity != null) {
+      if (m.intensity >= 8)
+        tips.push(
+          "Høj intensitet → ofte mere bitter/kraftig. Hvis den bliver harsh: prøv grovere grind eller 1–2°C lavere temp."
+        );
+      else if (m.intensity <= 4)
+        tips.push(
+          "Lav intensitet → mere mild kop. Hvis du savner punch: prøv finere grind eller lidt lavere ratio (mere kaffe)."
+        );
+      else tips.push("Mellem intensitet → god all-round. Små grind-justeringer giver tydelige ændringer.");
+    }
+
+    if (m?.arabica_pct != null) {
+      if (m.arabica_pct >= 90)
+        tips.push("Høj Arabica-andel → typisk mere sødme/aroma og mindre ‘kant’ end blends med robusta.");
+      else tips.push("Arabica under 90% → forvent mere ‘bite’ og en mere ‘koffein-følelse’ (ofte robusta i mixet).");
+    }
+
+    if (m?.form) {
+      if (m.form === "beans") tips.push("Hele bønner: kværn lige før bryg for markant bedre aroma og klarhed.");
+      if (m.form === "ground") tips.push("Formalet kaffe: opbevar lufttæt/mørkt. Smag falder hurtigere efter åbning.");
+    }
+
+    if (brew?.method)
+      tips.push(
+        `Brewmaster anbefaler: ${brew.method} · Grind: ${brew.grind} · Ratio: ${brew.ratio} · Temp: ${brew.temp_c}°C`
+      );
+
+    const missing: string[] = [];
+    if (!detail?.origin) missing.push("origin");
+    if (!detail?.dna) missing.push("smags-DNA");
+    const missingText = missing.length
+      ? `Mangler: ${missing.join(" + ")} (vi kan lære det over tid når flere scanner/bedømmer).`
+      : null;
+
+    return { tips, missingText };
+  }, [result, detail]);
 
   return (
     <div className={styles.page}>
@@ -420,14 +460,18 @@ export default function ScanClient() {
             <div className={styles.scanHint}>Du kan scanne igen eller skifte billede.</div>
           </div>
 
-          {/* preview (simpelt, uden ekstra CSS – browser default) */}
           {previewUrl ? (
             <div className={styles.scanFrame} style={{ padding: 0 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={previewUrl}
                 alt="Preview"
-                style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 16 }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  borderRadius: 16,
+                }}
               />
             </div>
           ) : (
@@ -474,12 +518,8 @@ export default function ScanClient() {
           <div className={styles.pillsRow}>
             <div className={styles.pillStrong}>Scan færdig · {pct(confidence)}</div>
             <div className={styles.pillSoft}>
-              {result.status === "resolved"
-                ? "Resolved"
-                : result.status === "needs_user"
-                ? "Needs input"
-                : "Failed"}{" "}
-              · {pct(confidence)}
+              {result.status === "resolved" ? "Resolved" : result.status === "needs_user" ? "Needs input" : "Failed"} ·{" "}
+              {pct(confidence)}
             </div>
           </div>
 
@@ -527,36 +567,23 @@ export default function ScanClient() {
 
           {detail && (
             <section className={styles.card}>
-              <div className={styles.sectionTitle}>Produkt-info</div>
+              <div className={styles.sectionTitle}>Brewmaster notes</div>
 
-              <div className={styles.infoRow}>
-                <div className={styles.infoLabel}>Origin</div>
-                <div className={styles.infoValue}>
-                  {detail.origin ? JSON.stringify(detail.origin) : "— (ingen origin endnu)"}
+              {bm.tips.map((t, i) => (
+                <div key={i} className={styles.infoRow}>
+                  <div className={styles.infoLabel}>Tip</div>
+                  <div className={styles.infoValue}>{t}</div>
                 </div>
-              </div>
+              ))}
 
-              <div className={styles.infoRow}>
-                <div className={styles.infoLabel}>DNA</div>
-                <div className={styles.infoValue}>
-                  {detail.dna ? JSON.stringify(detail.dna) : "— (ingen dna endnu)"}
+              {bm.missingText && (
+                <div className={styles.infoRow}>
+                  <div className={styles.infoLabel}>Data</div>
+                  <div className={styles.infoValue}>{bm.missingText}</div>
                 </div>
-              </div>
+              )}
 
-              <div className={styles.infoRow}>
-                <div className={styles.infoLabel}>Anbefalet bryg</div>
-                <div className={styles.infoValue}>
-                  <b>{detail.brew.method}</b> · Grind: {detail.brew.grind} · Ratio:{" "}
-                  {detail.brew.ratio} · Temp: {detail.brew.temp_c}°C
-                  {detail.brew.notes ? <div className={styles.infoNote}>{detail.brew.notes}</div> : null}
-                </div>
-              </div>
-
-              <button
-                className={styles.secondaryBtn}
-                onClick={onSaveToInventory}
-                disabled={busy || !canSaveInventory}
-              >
+              <button className={styles.secondaryBtn} onClick={onSaveToInventory} disabled={busy || !canSaveInventory}>
                 {busy ? "Gemmer…" : "Gem i inventory"}
               </button>
             </section>
@@ -601,10 +628,7 @@ export default function ScanClient() {
 
                 <label className={styles.field}>
                   <span>Form</span>
-                  <select
-                    value={edit.form ?? "beans"}
-                    onChange={(e) => setEdit((p) => ({ ...p, form: e.target.value as any }))}
-                  >
+                  <select value={edit.form ?? "beans"} onChange={(e) => setEdit((p) => ({ ...p, form: e.target.value as any }))}>
                     <option value="beans">beans</option>
                     <option value="ground">ground</option>
                   </select>
