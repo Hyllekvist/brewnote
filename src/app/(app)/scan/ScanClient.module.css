@@ -1,578 +1,401 @@
-/* src/app/(app)/scan/ScanClient.module.css */
+/* =========================================================
+   BrewNote — Scan UI v2 (CSS Modules safe)
+   ========================================================= */
 
-/* ---------------------------------------------------------
-   BrewNote Scan UI v2 — Premium cards + flow + light/dark
-   --------------------------------------------------------- */
+/* ---------- Theme tokens (MUST include local class) ---------- */
 
-/* Theme tokens */
-:global(html[data-theme="dark"]) {
+:global(html[data-theme="dark"]) .page {
   --bg: #0b0d10;
-  --panel: rgba(255, 255, 255, 0.06);
-  --panel2: rgba(255, 255, 255, 0.08);
-  --stroke: rgba(255, 255, 255, 0.10);
-  --stroke2: rgba(255, 255, 255, 0.14);
-  --ink: rgba(255, 255, 255, 0.92);
-  --muted: rgba(255, 255, 255, 0.62);
-  --muted2: rgba(255, 255, 255, 0.45);
+  --panel: rgba(255,255,255,0.06);
+  --panel2: rgba(255,255,255,0.08);
+  --stroke: rgba(255,255,255,0.10);
+  --stroke2: rgba(255,255,255,0.14);
+  --ink: rgba(255,255,255,0.92);
+  --muted: rgba(255,255,255,0.62);
+  --muted2: rgba(255,255,255,0.45);
 
-  --accent: #caa36b; /* warm bronze */
+  --accent: #caa36b;
   --accent2: #a9804a;
   --good: #1fa97b;
   --bad: #ff4d5e;
 
-  --shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
-  --shadow2: 0 16px 50px rgba(0, 0, 0, 0.45);
+  --shadow: 0 24px 70px rgba(0,0,0,0.55);
+  --shadow2: 0 14px 44px rgba(0,0,0,0.45);
 
   --radius: 22px;
   --radius2: 16px;
 
-  --blur: blur(14px);
-  --glass: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.05));
-  --glass2: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+  --glass: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
 }
 
-:global(html[data-theme="light"]) {
-  --bg: #f7f7f9;
-  --panel: rgba(10, 12, 16, 0.04);
-  --panel2: rgba(10, 12, 16, 0.06);
-  --stroke: rgba(10, 12, 16, 0.08);
-  --stroke2: rgba(10, 12, 16, 0.12);
-  --ink: rgba(10, 12, 16, 0.92);
-  --muted: rgba(10, 12, 16, 0.62);
-  --muted2: rgba(10, 12, 16, 0.45);
+:global(html[data-theme="light"]) .page {
+  --bg: #f6f7f9;
+  --panel: rgba(10,12,16,0.04);
+  --panel2: rgba(10,12,16,0.06);
+  --stroke: rgba(10,12,16,0.08);
+  --stroke2: rgba(10,12,16,0.12);
+  --ink: rgba(10,12,16,0.92);
+  --muted: rgba(10,12,16,0.62);
+  --muted2: rgba(10,12,16,0.45);
 
   --accent: #b2844b;
   --accent2: #8d6432;
   --good: #0f8a60;
   --bad: #e53b4a;
 
-  --shadow: 0 22px 60px rgba(0, 0, 0, 0.10);
-  --shadow2: 0 12px 36px rgba(0, 0, 0, 0.10);
+  --shadow: 0 22px 56px rgba(0,0,0,0.12);
+  --shadow2: 0 12px 36px rgba(0,0,0,0.10);
 
   --radius: 22px;
   --radius2: 16px;
 
-  --blur: blur(10px);
   --glass: linear-gradient(180deg, rgba(255,255,255,0.80), rgba(255,255,255,0.55));
-  --glass2: linear-gradient(180deg, rgba(255,255,255,0.70), rgba(255,255,255,0.45));
 }
 
-/* If you DON'T use data-theme, uncomment and adapt:
-:global(.dark) { ... }
-:global(.light) { ... }
-*/
+/* ---------- Page shell ---------- */
 
 .page {
-  min-height: calc(100vh - 0px);
-  padding: 18px 14px 96px;
+  min-height: 100vh;
+  background: var(--bg);
   color: var(--ink);
-  background:
-    radial-gradient(1200px 700px at 25% 0%, rgba(202, 163, 107, 0.16), transparent 60%),
-    radial-gradient(900px 500px at 85% 20%, rgba(31, 169, 123, 0.10), transparent 65%),
-    radial-gradient(700px 400px at 50% 110%, rgba(255, 255, 255, 0.05), transparent 70%),
-    var(--bg);
+  padding: 16px 14px 120px;
 }
 
-@media (min-width: 720px) {
-  .page {
-    max-width: 680px;
-    margin: 0 auto;
-    padding: 20px 16px 110px;
-  }
+/* ---------- Hero ---------- */
+
+.hero {
+  margin-bottom: 14px;
 }
+
+.h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.sub {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* ---------- Card ---------- */
 
 .card {
   background: var(--glass);
   border: 1px solid var(--stroke);
   border-radius: var(--radius);
-  box-shadow: var(--shadow2);
-  backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
+  box-shadow: var(--shadow);
   padding: 16px;
+  margin-top: 14px;
 }
 
-@media (min-width: 720px) {
-  .card {
-    padding: 18px;
-  }
-}
-
-/* ---------------------------------------------------------
-   Scan card (top)
-   --------------------------------------------------------- */
+/* ---------- Scan card ---------- */
 
 .scanCard {
   position: relative;
   overflow: hidden;
-  margin-top: 10px;
 }
 
 .scanTop {
-  display: grid;
-  gap: 6px;
-  padding: 4px 2px 12px;
+  text-align: center;
+  margin-bottom: 12px;
 }
 
 .scanBadge {
-  display: inline-flex;
-  width: fit-content;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
+  display: inline-block;
+  padding: 4px 10px;
   border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--stroke);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--panel2);
+  color: var(--muted);
 }
 
 .scanTitle {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
+  margin-top: 8px;
+  font-size: 20px;
+  font-weight: 700;
 }
 
 .scanHint {
+  margin-top: 4px;
+  font-size: 13px;
   color: var(--muted);
-  font-size: 14px;
-  line-height: 1.35;
 }
+
+/* ---------- Scan frame ---------- */
 
 .scanFrame {
   position: relative;
+  height: 200px;
+  margin: 14px 0;
   border-radius: var(--radius2);
+  background: rgba(0,0,0,0.25);
   border: 1px dashed var(--stroke2);
-  background:
-    radial-gradient(500px 260px at 50% 15%, rgba(202, 163, 107, 0.10), transparent 55%),
-    rgba(255, 255, 255, 0.03);
-  height: 190px;
-  overflow: hidden;
   display: grid;
   place-items: center;
 }
 
-@media (min-width: 720px) {
-  .scanFrame {
-    height: 220px;
-  }
-}
-
-.frameCorners {
-  position: absolute;
-  inset: 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.08);
-  pointer-events: none;
-}
-
 .frameIcon {
-  font-size: 26px;
-  opacity: 0.75;
-  transform: translateY(-2px);
+  font-size: 22px;
+  opacity: 0.6;
 }
 
-.previewImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: saturate(1.02) contrast(1.02);
-}
-
-.scanning .previewImg {
-  filter: saturate(0.92) contrast(0.95) brightness(0.92);
+.scanning .scanFrame {
+  border-color: var(--accent);
 }
 
 .scanSweep {
   position: absolute;
-  inset: -35%;
+  inset: 0;
   background: linear-gradient(
     90deg,
-    transparent 0%,
-    rgba(202, 163, 107, 0.10) 25%,
-    rgba(202, 163, 107, 0.22) 50%,
-    rgba(202, 163, 107, 0.10) 75%,
-    transparent 100%
+    transparent,
+    rgba(202,163,107,0.25),
+    transparent
   );
-  transform: translateX(-60%) rotate(8deg);
-  animation: sweep 1.35s ease-in-out infinite;
-  mix-blend-mode: screen;
-  pointer-events: none;
+  animation: sweep 1.4s linear infinite;
 }
 
 @keyframes sweep {
-  0% { transform: translateX(-70%) rotate(8deg); opacity: 0.0; }
-  15% { opacity: 1; }
-  55% { opacity: 1; }
-  100% { transform: translateX(70%) rotate(8deg); opacity: 0.0; }
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
 }
+
+/* ---------- Controls ---------- */
 
 .controls {
   display: grid;
   gap: 10px;
-  margin-top: 12px;
+}
+
+.fileBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border-radius: 999px;
+  background: var(--panel2);
+  border: 1px solid var(--stroke);
+  cursor: pointer;
+  font-weight: 600;
 }
 
 .fileInput {
   display: none;
 }
 
-.fileBtn {
-  height: 46px;
-  border-radius: 999px;
-  border: 1px solid var(--stroke2);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--ink);
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 14px;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
-}
-
-.fileBtn:active {
-  transform: translateY(1px);
-}
-
 .fileMeta {
-  padding: 10px 12px;
-  border-radius: 16px;
-  border: 1px solid var(--stroke);
-  background: rgba(255, 255, 255, 0.03);
+  text-align: center;
 }
 
 .fileName {
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  line-height: 1.2;
+  font-size: 13px;
 }
 
 .fileSub {
-  margin-top: 4px;
-  color: var(--muted);
   font-size: 12px;
-  line-height: 1.3;
+  color: var(--muted2);
 }
 
+/* ---------- Buttons ---------- */
+
 .primaryBtn {
-  margin-top: 12px;
-  height: 52px;
+  margin-top: 10px;
+  padding: 14px;
   border-radius: 999px;
-  border: 1px solid rgba(202, 163, 107, 0.35);
-  background: linear-gradient(180deg, rgba(202,163,107,0.20), rgba(202,163,107,0.08));
-  color: var(--ink);
-  font-weight: 900;
-  letter-spacing: -0.01em;
-  box-shadow: 0 14px 36px rgba(202, 163, 107, 0.12);
+  border: none;
+  background: linear-gradient(180deg, var(--accent), var(--accent2));
+  color: #0b0d10;
+  font-weight: 700;
 }
 
 .primaryBtn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+  opacity: 0.6;
 }
 
-.primaryBtn:active:not(:disabled) {
-  transform: translateY(1px);
+.secondaryBtn {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+  background: var(--panel);
+  color: var(--ink);
+  font-weight: 600;
 }
 
-/* Scan card collapse (when result exists) */
-.collapsed {
-  padding-bottom: 12px;
+.ghostBtn {
+  padding: 12px;
+  border-radius: 999px;
+  background: transparent;
+  border: none;
+  color: var(--accent);
 }
 
-.collapsed .scanFrame {
-  height: 92px;
-}
-
-.collapsed .previewImg {
-  filter: saturate(0.92) contrast(0.95) brightness(0.92);
-}
-
-.collapsed .controls {
-  grid-template-columns: 1fr;
-}
-
-.collapsed .fileMeta {
-  display: none;
-}
-
-/* ---------------------------------------------------------
-   Notices
-   --------------------------------------------------------- */
+/* ---------- Notices ---------- */
 
 .noticeWrap {
   margin-top: 12px;
-  display: grid;
-  gap: 10px;
 }
 
 .noticeError {
-  padding: 12px 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 77, 94, 0.35);
-  background: linear-gradient(180deg, rgba(255,77,94,0.14), rgba(255,77,94,0.06));
-  color: var(--ink);
-  font-weight: 700;
-  line-height: 1.35;
+  color: var(--bad);
 }
 
 .noticeOk {
-  padding: 12px 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(31, 169, 123, 0.35);
-  background: linear-gradient(180deg, rgba(31,169,123,0.14), rgba(31,169,123,0.06));
-  color: var(--ink);
-  font-weight: 800;
+  color: var(--good);
 }
 
-/* ---------------------------------------------------------
-   Pills row
-   --------------------------------------------------------- */
+/* ---------- Pills ---------- */
 
 .pillsRow {
-  margin-top: 14px;
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
 }
 
 .pillStrong {
-  padding: 10px 12px;
+  padding: 6px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(31, 169, 123, 0.35);
-  background: linear-gradient(180deg, rgba(31,169,123,0.18), rgba(31,169,123,0.08));
-  font-weight: 900;
-  letter-spacing: -0.01em;
+  background: rgba(31,169,123,0.2);
+  color: var(--good);
+  font-weight: 600;
+  font-size: 13px;
 }
 
 .pillSoft {
-  padding: 10px 12px;
+  padding: 6px 12px;
   border-radius: 999px;
-  border: 1px solid var(--stroke);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--panel2);
   color: var(--muted);
-  font-weight: 800;
+  font-size: 13px;
 }
 
-/* ---------------------------------------------------------
-   Product card
-   --------------------------------------------------------- */
+/* ---------- Product ---------- */
 
 .productTitle {
-  font-size: 26px;
-  font-weight: 950;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-  margin-bottom: 12px;
+  font-size: 20px;
+  font-weight: 700;
 }
 
 .metaGrid {
+  margin-top: 10px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
 }
 
 .metaItem {
-  border-radius: 18px;
-  border: 1px solid var(--stroke);
-  background: var(--glass2);
-  padding: 12px 12px;
-  display: grid;
-  gap: 6px;
-  min-height: 58px;
+  background: var(--panel2);
+  border-radius: 12px;
+  padding: 10px;
 }
 
 .metaItem span {
-  color: var(--muted);
+  display: block;
   font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.01em;
+  color: var(--muted);
 }
 
-.metaItem b {
-  font-size: 18px;
-  font-weight: 950;
-  letter-spacing: -0.02em;
-}
-
-/* ---------------------------------------------------------
-   Product info table
-   --------------------------------------------------------- */
+/* ---------- Info ---------- */
 
 .sectionTitle {
-  font-weight: 950;
-  font-size: 18px;
-  letter-spacing: -0.02em;
-  margin-bottom: 10px;
+  font-weight: 700;
+  margin-bottom: 8px;
 }
 
 .infoRow {
   display: grid;
-  grid-template-columns: 110px 1fr;
+  grid-template-columns: 90px 1fr;
   gap: 10px;
-  padding: 10px 0;
+  padding: 8px 0;
   border-top: 1px solid var(--stroke);
-}
-
-.infoRow:first-of-type {
-  border-top: 0;
 }
 
 .infoLabel {
   color: var(--muted);
-  font-weight: 900;
   font-size: 13px;
 }
 
 .infoValue {
-  color: var(--ink);
-  font-weight: 700;
-  line-height: 1.35;
+  font-size: 14px;
 }
 
 .infoNote {
-  margin-top: 6px;
-  color: var(--muted);
+  margin-top: 4px;
   font-size: 12px;
-  line-height: 1.35;
+  color: var(--muted2);
 }
 
-/* Buttons inside cards */
-.secondaryBtn {
-  margin-top: 14px;
-  height: 52px;
-  width: 100%;
-  border-radius: 999px;
-  border: 1px solid var(--stroke2);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--ink);
-  font-weight: 950;
-  letter-spacing: -0.01em;
-}
-
-.secondaryBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.secondaryBtn:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.ghostBtn {
-  margin-top: 10px;
-  height: 44px;
-  width: 100%;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--muted);
-  font-weight: 900;
-}
-
-/* ---------------------------------------------------------
-   Accordion / Edit form
-   --------------------------------------------------------- */
+/* ---------- Accordion ---------- */
 
 .accordionHeader {
   width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  border-radius: 999px;
+  padding: 12px 16px;
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 4px 2px 2px;
-  background: transparent;
-  border: 0;
-  color: var(--ink);
-  font-weight: 950;
-  font-size: 16px;
-  letter-spacing: -0.02em;
+  font-weight: 600;
 }
 
 .chev {
-  color: var(--muted);
-  font-weight: 900;
+  opacity: 0.6;
 }
+
+/* ---------- Form ---------- */
 
 .formGrid {
   margin-top: 12px;
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .field {
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 
 .field span {
   font-size: 12px;
   color: var(--muted);
-  font-weight: 900;
-  letter-spacing: 0.02em;
 }
 
 .field input,
 .field select {
-  height: 46px;
-  border-radius: 14px;
+  padding: 10px;
+  border-radius: 10px;
   border: 1px solid var(--stroke);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--panel);
   color: var(--ink);
-  padding: 0 12px;
-  font-weight: 850;
-  outline: none;
 }
 
-.field input:focus,
-.field select:focus {
-  border-color: rgba(202, 163, 107, 0.45);
-  box-shadow: 0 0 0 4px rgba(202, 163, 107, 0.12);
-}
+/* ---------- Actions ---------- */
 
 .actionsRow {
-  margin-top: 8px;
-  display: grid;
+  display: flex;
   gap: 10px;
+  margin-top: 10px;
 }
 
-/* ---------------------------------------------------------
-   Sticky CTA (only before/during scan)
-   --------------------------------------------------------- */
+/* ---------- Sticky ---------- */
 
 .sticky {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 12px 14px 18px;
-  background: linear-gradient(180deg, transparent, rgba(0,0,0,0.22));
-  pointer-events: none;
-  z-index: 30;
-}
-
-:global(html[data-theme="light"]) .sticky {
-  background: linear-gradient(180deg, transparent, rgba(255,255,255,0.75));
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
 }
 
 .stickyBtn {
-  pointer-events: auto;
   width: 100%;
-  height: 54px;
+  padding: 14px;
   border-radius: 999px;
-  border: 1px solid rgba(202, 163, 107, 0.35);
-  background: linear-gradient(180deg, rgba(202,163,107,0.22), rgba(202,163,107,0.10));
-  color: var(--ink);
-  font-weight: 950;
-  letter-spacing: -0.01em;
-  box-shadow: var(--shadow2);
-}
-
-.stickyBtn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+  border: none;
+  background: linear-gradient(180deg, var(--accent), var(--accent2));
+  font-weight: 700;
 }
