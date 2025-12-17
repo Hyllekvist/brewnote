@@ -364,3 +364,43 @@ padding: 16px 14px calc(140px + 92px + env(safe-area-inset-bottom));
   color: #0b0d10;
   box-shadow: var(--shadow2);
 }
+
+/* v7: giver plads når sticky er synlig */
+.hasSticky {
+  padding-bottom: 140px;
+}
+
+/* v7: små enter-animations (uden at være flashy) */
+.enter {
+  animation: fadeUp 240ms ease-out both;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter { animation: none; }
+}
+
+/* gør preview pænere og “app-like” */
+.previewImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius2);
+  display: block;
+}
+
+/* v7: sticky må ikke virke chunky */
+.sticky {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 50;
+  pointer-events: none;
+}
+.stickyBtn {
+  pointer-events: auto;
+}
