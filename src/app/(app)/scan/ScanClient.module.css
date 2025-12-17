@@ -404,3 +404,52 @@ padding: 16px 14px calc(140px + 92px + env(safe-area-inset-bottom));
 .stickyBtn {
   pointer-events: auto;
 }
+
+.page {
+  padding-bottom: 92px; /* plads til bottom nav */
+}
+
+.results {
+  display: grid;
+  gap: 14px;
+}
+
+/* scan card actions row */
+.scanActions {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.tertiaryBtn {
+  width: 100%;
+  border-radius: 999px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 600;
+}
+
+.noticeWrap {
+  margin: 12px 0;
+}
+
+/* sticky — hold den “lav”, og undgå at den føles som en blok */
+.sticky {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(74px + env(safe-area-inset-bottom)); /* over bottom nav */
+  z-index: 40;
+  pointer-events: none;
+}
+
+.stickyBtn {
+  pointer-events: auto;
+  width: 100%;
+  border-radius: 999px;
+  padding: 14px 16px;
+  font-weight: 700;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.55);
+}
