@@ -1,30 +1,50 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const code = url.searchParams.get("code");
-  const next = url.searchParams.get("next") || "/";
 
-  // Hvis ingen code -> send brugeren til login
-  if (!code) {
-    return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(next)}`, url.origin));
+  const code = url.searchParams.get("code"); // Supabase sender typisk ?code=...
+  const next = url.searchParams.get("next") || "/scan";
+  const error = url.searchParams.get("error");
+  const errorDescription = url.searchParams.get("error_description");
+
+  if (error) {
+    const dest = `/login?next=${encodeURIComponent(next)}&err=${encodeURIComponent(
+      errorDescription || error
+    )}`;
+    return NextResponse.redirect(new URL(dest, url.origin));
   }
 
-  const supabase = createClient(
+  const cookieStore = cookies();
+
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name: string, options: any) {
+          cookieStore.set({ name, value: "", ...options, maxAge: 0 });
+        },
+      },
+    }
   );
 
-  // Exchange code for session (server-side)
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-
-  if (error || !data?.session) {
-    return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(next)}&err=callback`, url.origin));
+  // ✅ VIGTIG: udveksler code til session + sætter cookies
+  if (code) {
+    const { error: exchErr } = await supabase.auth.exchangeCodeForSession(code);
+    if (exchErr) {
+      const dest = `/login?next=${encodeURIComponent(next)}&err=${encodeURIComponent(exchErr.message)}`;
+      return NextResponse.redirect(new URL(dest, url.origin));
+    }
   }
 
-  // VIGTIGT:
-  // Uden auth-helpers får du ikke automatisk sat session cookies her.
-  // Så vi sender brugeren videre og lader client hente session efter redirect.
   return NextResponse.redirect(new URL(next, url.origin));
 }
