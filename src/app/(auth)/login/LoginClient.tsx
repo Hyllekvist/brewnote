@@ -24,12 +24,15 @@ export default function LoginClient() {
     setBusy(true);
 
     try {
-      // ✅ route group (auth) er ikke en del af URL’en → det er /callback
+      // ✅ route group = stadig bare /callback
       const redirectTo = `${SITE_URL}/callback?next=${encodeURIComponent(next)}`;
 
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: redirectTo },
+        options: {
+          emailRedirectTo: redirectTo,
+          shouldCreateUser: true,
+        },
       });
 
       if (error) throw new Error(error.message);
@@ -51,6 +54,7 @@ export default function LoginClient() {
         onChange={(e) => setEmail(e.target.value)}
         placeholder="din@email.dk"
         inputMode="email"
+        autoComplete="email"
         style={{ width: "100%", padding: 12, borderRadius: 12, marginTop: 10 }}
       />
 
