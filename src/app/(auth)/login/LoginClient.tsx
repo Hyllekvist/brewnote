@@ -11,6 +11,7 @@ const SITE_URL =
 export default function LoginClient() {
   const supabase = useMemo(() => supabaseBrowser(), []);
   const search = useSearchParams();
+
   const next = search.get("next") || "/";
 
   const [email, setEmail] = useState("");
@@ -24,15 +25,11 @@ export default function LoginClient() {
     setBusy(true);
 
     try {
-      // ✅ route group = stadig bare /callback
       const redirectTo = `${SITE_URL}/callback?next=${encodeURIComponent(next)}`;
 
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: {
-          emailRedirectTo: redirectTo,
-          shouldCreateUser: true,
-        },
+        options: { emailRedirectTo: redirectTo },
       });
 
       if (error) throw new Error(error.message);
@@ -54,7 +51,6 @@ export default function LoginClient() {
         onChange={(e) => setEmail(e.target.value)}
         placeholder="din@email.dk"
         inputMode="email"
-        autoComplete="email"
         style={{ width: "100%", padding: 12, borderRadius: 12, marginTop: 10 }}
       />
 
