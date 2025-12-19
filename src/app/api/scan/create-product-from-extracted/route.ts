@@ -10,164 +10,136 @@ type Extracted = {
   intensity?: number;
   arabica_pct?: number;
   organic?: boolean;
+  ean?: string;
 };
 
-function norm(s?: string) {
-  return (s ?? "").trim();
-}
-
 function fingerprintFromExtracted(ex: Extracted) {
-  const n = (s?: string) =>
+  const norm = (s?: string) =>
     (s ?? "")
       .trim()
       .toLowerCase()
       .replace(/\s+/g, " ");
 
   return [
-    `b:${n(ex.brand)}`,
-    `l:${n(ex.line)}`,
-    `n:${n(ex.name)}`,
+    `b:${norm(ex.brand)}`,
+    `l:${norm(ex.line)}`,
+    `n:${norm(ex.name)}`,
     `s:${ex.size_g ?? ""}`,
-    `f:${n(ex.form)}`,
+    `f:${norm(ex.form)}`,
   ].join("|");
 }
 
 export async function POST(req: Request) {
   const { sessionId } = await req.json();
-
-  if (!sessionId) {
-    return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
-  }
+  if (!sessionId) return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
 
   const supabase = supabaseServer();
 
-  // 1) hent session + extracted
-  const { data: sess, error: sErr } = await supabase
+  const { data: auth, error: aErr } = await supabase.auth.getUser();
+  const user = auth?.user;
+  if (aErr || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { data: session, error: sErr } = await supabase
     .from("scan_sessions")
-    .select("id, extracted")
+    .select("id,user_id,extracted")
     .eq("id", sessionId)
     .single();
 
-  if (sErr || !sess) {
-    return NextResponse.json({ error: "Unknown session" }, { status: 404 });
+  if (sErr || !session) return NextResponse.json({ error: "Unknown session" }, { status: 404 });
+
+  // legacy claim
+  if (session.user_id == null) {
+    const { error: claimErr } = await supabase
+      .from("scan_sessions")
+      .update({ user_id: user.id })
+      .eq("id", sessionId);
+    if (claimErr) return NextResponse.json({ error: claimErr.message }, { status: 400 });
+    session.user_id = user.id;
   }
 
-  const extracted = (sess.extracted ?? {}) as Extracted;
+  if (session.user_id !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const brand = norm(extracted.brand);
-  const name = norm(extracted.name);
-  const line = norm(extracted.line) || null;
+  const extracted = (session.extracted ?? {}) as Extracted;
+
+  const brand = (extracted.brand ?? "").trim();
+  const name = (extracted.name ?? "").trim();
+  const line = (extracted.line ?? "").trim() || null;
 
   if (!brand || !name) {
-    return NextResponse.json(
-      { error: "Extracted must include at least brand + name" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Brand + name kræves for at oprette produkt." }, { status: 400 });
   }
 
-  // 2) upsert product (kræver unique index på (brand,line,name) som du har lavet)
-  const { data: product, error: pErr } = await supabase
+  // 1) create product
+  const { data: pRow, error: pErr } = await supabase
     .from("products")
-    .upsert(
-      { brand, line, name },
-      { onConflict: "brand,line,name" }
-    )
+    .insert({ brand, line, name })
     .select("id, brand, line, name")
     .single();
 
-  if (pErr || !product) {
-    return NextResponse.json({ error: pErr?.message ?? "product upsert failed" }, { status: 400 });
-  }
+  if (pErr || !pRow) return NextResponse.json({ error: pErr?.message ?? "product insert failed" }, { status: 400 });
 
-  // 3) find eller opret variant (match på product_id + size_g + form)
-  const size_g = extracted.size_g ?? null;
-  const form = extracted.form ?? null;
-
-  let variantId: string | null = null;
-
-  const { data: existing } = await supabase
+  // 2) create variant
+  const { data: vRow, error: vErr } = await supabase
     .from("product_variants")
-    .select("id, size_g, form")
-    .eq("product_id", product.id)
-    .eq("size_g", size_g)
-    .eq("form", form)
-    .limit(1);
+    .insert({
+      product_id: pRow.id,
+      size_g: extracted.size_g ?? null,
+      form: extracted.form ?? null,
+      intensity: extracted.intensity ?? null,
+      arabica_pct: extracted.arabica_pct ?? null,
+      organic: extracted.organic ?? null,
+    })
+    .select("id, size_g, form, intensity, arabica_pct, organic")
+    .single();
 
-  if (existing?.[0]?.id) {
-    variantId = existing[0].id;
-  } else {
-    const { data: vIns, error: vErr } = await supabase
-      .from("product_variants")
-      .insert({
-        product_id: product.id,
-        size_g,
-        form,
-        intensity: extracted.intensity ?? null,
-        arabica_pct: extracted.arabica_pct ?? null,
-        organic: extracted.organic ?? null,
-      })
-      .select("id, size_g, form, intensity, arabica_pct, organic")
-      .single();
+  if (vErr || !vRow) return NextResponse.json({ error: vErr?.message ?? "variant insert failed" }, { status: 400 });
 
-    if (vErr || !vIns) {
-      return NextResponse.json({ error: vErr?.message ?? "variant insert failed" }, { status: 400 });
-    }
-
-    variantId = vIns.id;
+  // 3) optional barcode
+  if (extracted.ean) {
+    await supabase.from("product_barcodes").insert({
+      ean: extracted.ean,
+      variant_id: vRow.id,
+    });
   }
 
-  if (!variantId) {
-    return NextResponse.json({ error: "Could not create/find variant" }, { status: 400 });
-  }
+  const match = {
+    product_id: pRow.id,
+    variant_id: vRow.id,
+    brand: pRow.brand,
+    line: pRow.line,
+    name: pRow.name,
+    size_g: vRow.size_g,
+    form: vRow.form,
+    intensity: vRow.intensity,
+    arabica_pct: vRow.arabica_pct,
+    organic: vRow.organic,
+  };
 
-  // 4) læring: fingerprint -> variant
-  const fp = fingerprintFromExtracted(extracted);
-  await supabase
-    .from("scan_fingerprints")
-    .upsert({ fingerprint: fp, variant_id: variantId }, { onConflict: "fingerprint" });
-
-  // 5) opdater scan session til resolved
+  // 4) update session
   const confidence = 0.92;
+  const status = "resolved";
+
   const { error: upErr } = await supabase
     .from("scan_sessions")
     .update({
-      resolved_variant_id: variantId,
-      status: "resolved",
+      resolved_variant_id: vRow.id,
       resolution_confidence: confidence,
+      status,
     })
     .eq("id", sessionId);
 
-  if (upErr) {
-    return NextResponse.json({ error: upErr.message }, { status: 400 });
-  }
+  if (upErr) return NextResponse.json({ error: upErr.message }, { status: 400 });
 
-  // 6) return match (til UI)
-  // hent variant + product for at returnere samme shape som resten
-  const { data: vRow } = await supabase
-    .from("product_variants")
-    .select("id, size_g, form, intensity, arabica_pct, organic, products(id, brand, line, name)")
-    .eq("id", variantId)
-    .single();
-
-  const p = Array.isArray((vRow as any)?.products)
-    ? (vRow as any).products[0]
-    : (vRow as any)?.products;
+  // 5) learning fingerprint
+  const fp = fingerprintFromExtracted(extracted);
+  await supabase.from("scan_fingerprints").upsert(
+    { fingerprint: fp, variant_id: vRow.id },
+    { onConflict: "fingerprint" }
+  );
 
   return NextResponse.json({
-    status: "resolved",
-    sessionId,
     confidence,
-    match: {
-      product_id: p?.id ?? product.id,
-      variant_id: vRow?.id ?? variantId,
-      brand: p?.brand ?? product.brand,
-      line: p?.line ?? product.line,
-      name: p?.name ?? product.name,
-      size_g: vRow?.size_g ?? size_g,
-      form: vRow?.form ?? form,
-      intensity: vRow?.intensity ?? null,
-      arabica_pct: vRow?.arabica_pct ?? null,
-      organic: vRow?.organic ?? null,
-    },
+    extracted,
+    match,
   });
 }
