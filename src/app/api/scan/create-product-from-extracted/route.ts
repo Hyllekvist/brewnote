@@ -132,11 +132,15 @@ export async function POST(req: Request) {
 
   // 5) learning fingerprint
   const fp = fingerprintFromExtracted(extracted);
-  await supabase.from("scan_fingerprints").upsert(
-    { fingerprint: fp, variant_id: vRow.id },
-    { onConflict: "fingerprint" }
-  );
-
+await supabase.from("scan_fingerprints").upsert(
+  {
+    fingerprint: fp,
+    variant_id: vRow.id,
+    confirmed_by: user.id,
+    confirmed_at: new Date().toISOString(),
+  },
+  { onConflict: "fingerprint" }
+);
   return NextResponse.json({
     confidence,
     extracted,
