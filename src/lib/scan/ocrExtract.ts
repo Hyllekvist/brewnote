@@ -1,4 +1,4 @@
-// src/lib/scan/ocrExtract.ts
+// src/lib/scan/ocrExtract.ts 
 type Extracted = {
   brand?: string;
   line?: string;
