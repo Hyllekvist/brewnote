@@ -202,7 +202,7 @@ export default function ScanClient() {
 
       const { error: upErr } = await supabase.storage.from("scans").upload(uploadPath, file, {
         contentType: file.type || "image/jpeg",
-        upsert: false,
+        upsert: true,
       });
       if (upErr) throw new Error(`upload: ${upErr.message}`);
 
