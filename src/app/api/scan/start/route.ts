@@ -2,25 +2,23 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
-  const { fileName, contentType } = await req.json();
-
+  const { fileName } = await req.json();
   const supabase = supabaseServer();
 
-  // ✅ kræv login (RLS forventer auth.uid())
-  const { data: auth, error: authErr } = await supabase.auth.getUser();
-  const user = auth?.user;
-
-  if (authErr || !user) {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const sessionId = crypto.randomUUID();
   const safeName = sanitize(fileName);
-  const uploadPath = `${user.id}/${sessionId}-${safeName}`; // ✅ IKKE "public/..."
+
+  // anbefalet path (du kan også beholde din, men this is clean)
+  const uploadPath = `${auth.user.id}/${sessionId}-${safeName}`;
 
   const { error } = await supabase.from("scan_sessions").insert({
     id: sessionId,
-    user_id: user.id,          // ✅ matcher RLS policy
+    user_id: auth.user.id,          // ✅ matcher RLS policy
     image_path: uploadPath,
     extracted: {},
     status: "pending",
