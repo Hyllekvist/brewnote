@@ -6,6 +6,7 @@ import BrewmasterPanel from "./BrewmasterPanel";
 import RateBrewPanel from "./RateBrewPanel";
 import styles from "./ScanClient.module.css";
 import { ocrExtractFromImageFile } from "@/lib/scan/ocrExtract";
+import { tryExtractEanFromImageFile } from "@/lib/scan/barcodeExtract";
 
 type Match = {
   product_id: string;
@@ -168,36 +169,45 @@ export default function ScanClient() {
   }
 
   async function tryOcrFillExtractedAndReprocess(sessionId: string) {
-    if (!file) return null;
+  if (!file) return null;
 
-    const ex = await ocrExtractFromImageFile(file);
-    const hasAnything = Object.values(ex).some((v) => v != null && String(v).length > 0);
-    if (!hasAnything) return null;
+  // 1) Prøv EAN først (hurtigt + præcist)
+  const ean = await tryExtractEanFromImageFile(file);
 
-    const updRes = await fetch("/api/scan/update-extracted", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sessionId, extracted: ex }),
-    });
+  // 2) Hvis ingen EAN → OCR fallback
+  const extracted: Extracted = ean ? { ean } : await ocrExtractFromImageFile(file);
 
-    const updText = await updRes.text();
-    const updJson = safeJson(updText);
-    if (!updRes.ok) {
-      throw new Error(`update-extracted ${updRes.status}: ${updJson?.error ?? updText}`);
-    }
+  const hasAnything = Object.values(extracted).some(
+    (v) => v != null && String(v).trim().length > 0
+  );
+  if (!hasAnything) return null;
 
-    const procRes2 = await fetch("/api/scan/process", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sessionId }),
-    });
+  // 3) gem extracted
+  const updRes = await fetch("/api/scan/update-extracted", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ sessionId, extracted }),
+  });
 
-    const text2 = await procRes2.text();
-    const j2 = safeJson(text2);
-    if (!procRes2.ok) throw new Error(`process ${procRes2.status}: ${j2?.error ?? text2}`);
-
-    return j2 as ProcessResult;
+  const updText = await updRes.text();
+  const updJson = safeJson(updText);
+  if (!updRes.ok) {
+    throw new Error(`update-extracted ${updRes.status}: ${updJson?.error ?? updText}`);
   }
+
+  // 4) re-run process
+  const procRes2 = await fetch("/api/scan/process", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ sessionId }),
+  });
+
+  const text2 = await procRes2.text();
+  const j2 = safeJson(text2);
+  if (!procRes2.ok) throw new Error(`process ${procRes2.status}: ${j2?.error ?? text2}`);
+
+  return j2 as ProcessResult;
+}
 
   async function onScan() {
     setErr(null);
