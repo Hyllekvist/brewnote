@@ -180,14 +180,6 @@ export async function POST(req: Request) {
 
   if (upErr) return NextResponse.json({ error: upErr.message }, { status: 400 });
 
-  // 6) LÆRING UPSERT (kun når resolved)
-  if (match?.variant_id) {
-    await supabase.from("scan_fingerprints").upsert(
-      { fingerprint: fp, variant_id: match.variant_id },
-      { onConflict: "fingerprint" }
-    );
-  }
-
   return NextResponse.json({
     status,
     sessionId,
