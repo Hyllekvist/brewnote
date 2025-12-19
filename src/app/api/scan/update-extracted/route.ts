@@ -1,4 +1,4 @@
-// src/app/api/scan/update-extracted/route.ts
+// src/app/api/scan/update-extracted/route.ts 
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 
