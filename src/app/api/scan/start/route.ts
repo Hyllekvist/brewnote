@@ -6,26 +6,23 @@ export async function POST(req: Request) {
 
   const supabase = supabaseServer();
 
-  // 1) kræv auth (så RLS + storage owner spiller)
-  const {
-    data: { user },
-    error: userErr,
-  } = await supabase.auth.getUser();
+  // ✅ kræv login på server
+  const { data: auth, error: authErr } = await supabase.auth.getUser();
+  const user = auth?.user;
 
-  if (userErr || !user) {
+  if (authErr || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const sessionId = crypto.randomUUID();
   const safeName = sanitize(fileName);
 
-  // 2) upload path SKAL være "din egen mappe" i private bucket
+  // ✅ læg filen i en user-folder (matcher storage policies)
   const uploadPath = `${user.id}/${sessionId}-${safeName}`;
 
-  // 3) insert session med user_id (matcher RLS)
   const { error } = await supabase.from("scan_sessions").insert({
     id: sessionId,
-    user_id: user.id,
+    user_id: user.id,          // ✅ vigtig
     image_path: uploadPath,
     extracted: {},
     status: "pending",
