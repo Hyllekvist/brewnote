@@ -2,12 +2,11 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
-  const fileName = body?.fileName as string | undefined;
+  const { fileName, contentType } = await req.json();
 
   const supabase = supabaseServer();
 
-  // ✅ kræv login (matcher RLS + storage own_scans)
+  // ✅ kræv login (RLS forventer auth.uid())
   const { data: auth, error: authErr } = await supabase.auth.getUser();
   const user = auth?.user;
 
@@ -16,15 +15,12 @@ export async function POST(req: Request) {
   }
 
   const sessionId = crypto.randomUUID();
-  const safeName = sanitize(fileName ?? "scan.jpg");
-
-  // ✅ upload under userId så storage owner policies giver mening
-  // (ScanClient bruger uploadPath direkte)
-  const uploadPath = `${user.id}/${sessionId}-${safeName}`;
+  const safeName = sanitize(fileName);
+  const uploadPath = `${user.id}/${sessionId}-${safeName}`; // ✅ IKKE "public/..."
 
   const { error } = await supabase.from("scan_sessions").insert({
     id: sessionId,
-    user_id: user.id,
+    user_id: user.id,          // ✅ matcher RLS policy
     image_path: uploadPath,
     extracted: {},
     status: "pending",
