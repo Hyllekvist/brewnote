@@ -1,3 +1,4 @@
+// src/app/api/scan/process/route.ts
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 
@@ -34,10 +35,7 @@ type Suggestion = {
 
 function fingerprintFromExtracted(ex: Extracted) {
   const norm = (s?: string) =>
-    (s ?? "")
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, " ");
+    (s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
 
   return [
     `b:${norm(ex.brand)}`,
@@ -96,22 +94,34 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Brug eksisterende extracted hvis brugeren allerede har rettet (ellers fallback til mock)
+  // 2) extracted (ingen mock!)
   const extracted: Extracted =
-    (session.extracted && Object.keys(session.extracted).length > 0)
+    session.extracted && Object.keys(session.extracted).length > 0
       ? (session.extracted as Extracted)
-      : {
-          brand: "Lavazza",
-          line: "Tierra!",
-          name: "Bio-Organic",
-          size_g: 500,
-          form: "beans",
-          intensity: 6,
-          arabica_pct: 100,
-          organic: true,
-        };
+      : {};
 
-  // 2) fingerprint lookup
+  // Hvis vi ikke har noget at matche på endnu → needs_user
+  if (Object.keys(extracted).length === 0) {
+    const status = "needs_user" as const;
+    const confidence = 0.2;
+
+    await supabase
+      .from("scan_sessions")
+      .update({ status, resolution_confidence: confidence })
+      .eq("id", sessionId);
+
+    return NextResponse.json({
+      status,
+      sessionId,
+      confidence,
+      extracted,
+      match: null,
+      suggestions: [],
+      imagePath: session.image_path,
+    });
+  }
+
+  // 3) fingerprint lookup (learning)
   const fp = fingerprintFromExtracted(extracted);
 
   const { data: fpRow } = await supabase
@@ -146,17 +156,18 @@ export async function POST(req: Request) {
         extracted,
         match,
         suggestions: [],
+        imagePath: session.image_path,
       });
     }
   }
 
-  // 3) resolve + suggestions
+  // 4) resolve + suggestions
   const { match, suggestions } = await resolveVariantWithSuggestions(supabase, extracted);
 
   const status: "resolved" | "needs_user" | "failed" = match ? "resolved" : "needs_user";
   const confidence = match ? 0.9 : suggestions.length ? 0.55 : 0.35;
 
-  // 4) persist session
+  // 5) persist session
   const { error: upErr } = await supabase
     .from("scan_sessions")
     .update({
@@ -169,7 +180,7 @@ export async function POST(req: Request) {
 
   if (upErr) return NextResponse.json({ error: upErr.message }, { status: 400 });
 
-  // 5) LÆRING UPSERT (kun når resolved)
+  // 6) LÆRING UPSERT (kun når resolved)
   if (match?.variant_id) {
     await supabase.from("scan_fingerprints").upsert(
       { fingerprint: fp, variant_id: match.variant_id },
@@ -184,6 +195,7 @@ export async function POST(req: Request) {
     extracted,
     match: match ?? null,
     suggestions,
+    imagePath: session.image_path,
   });
 }
 
@@ -196,7 +208,10 @@ async function matchByVariantId(supabase: any, variantId: string): Promise<Match
 
   if (error || !data) return null;
 
-  const p = Array.isArray((data as any).products) ? (data as any).products[0] : (data as any).products;
+  const p = Array.isArray((data as any).products)
+    ? (data as any).products[0]
+    : (data as any).products;
+
   if (!p) return null;
 
   return {
@@ -265,6 +280,7 @@ async function resolveVariantWithSuggestions(
 
   if (!products?.length) return { match: null, suggestions: [] };
 
+  // vælg første produkt med varianter
   let bestProduct: any = null;
   let bestVariants: any[] = [];
 
@@ -275,11 +291,11 @@ async function resolveVariantWithSuggestions(
       .eq("product_id", cand.id)
       .limit(25);
 
-    if ((vars?.length ?? 0) > (bestVariants.length ?? 0)) {
+    if ((vars?.length ?? 0) > 0) {
       bestProduct = cand;
       bestVariants = vars ?? [];
+      break;
     }
-    if ((vars?.length ?? 0) > 0) break;
   }
 
   if (!bestProduct) return { match: null, suggestions: [] };
@@ -287,19 +303,7 @@ async function resolveVariantWithSuggestions(
   const p = bestProduct;
   const variants = bestVariants;
 
-  if (!variants.length) {
-    return {
-      match: null,
-      suggestions: [
-        {
-          variant_id: "",
-          label: `${p.brand} ${p.line ? p.line + " " : ""}${p.name} (ingen varianter i DB)`,
-          confidence: 0.3,
-        },
-      ],
-    };
-  }
-
+  // C) exact variant match på size + form
   const exact = variants.find((v: any) => {
     const sizeOk = ex.size_g ? v.size_g === ex.size_g : true;
     const formOk = ex.form ? v.form === ex.form : true;
