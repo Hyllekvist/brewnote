@@ -1,4 +1,4 @@
-import Tesseract from "tesseract.js";
+import Tesseract from "tesseract.js"; 
 
 type Extracted = {
   brand?: string;
