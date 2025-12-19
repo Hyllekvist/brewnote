@@ -6,23 +6,23 @@ export async function POST(req: Request) {
 
   const supabase = supabaseServer();
 
-  // ✅ kræv login på server
-  const { data: auth, error: authErr } = await supabase.auth.getUser();
+  // ✅ kræv login
+  const { data: auth, error: aErr } = await supabase.auth.getUser();
   const user = auth?.user;
-
-  if (authErr || !user) {
+  if (aErr || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const sessionId = crypto.randomUUID();
   const safeName = sanitize(fileName);
 
-  // ✅ læg filen i en user-folder (matcher storage policies)
+  // ✅ vigtigt: IKKE "public/..." når bucket er private
+  // gem pr user så policies kan matche owner/user_id
   const uploadPath = `${user.id}/${sessionId}-${safeName}`;
 
   const { error } = await supabase.from("scan_sessions").insert({
     id: sessionId,
-    user_id: user.id,          // ✅ vigtig
+    user_id: user.id,
     image_path: uploadPath,
     extracted: {},
     status: "pending",
@@ -32,7 +32,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  return NextResponse.json({ sessionId, uploadPath });
+  return NextResponse.json({
+    sessionId,
+    uploadPath,
+    contentType: contentType || "image/jpeg",
+  });
 }
 
 function sanitize(name: string) {
