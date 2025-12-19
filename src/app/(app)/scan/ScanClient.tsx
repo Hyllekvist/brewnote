@@ -174,19 +174,30 @@ export default function ScanClient() {
   // 1) Prøv EAN først (hurtigt + præcist)
   const ean = await tryExtractEanFromImageFile(file);
 
-  // 2) Hvis ingen EAN → OCR fallback
-  const extracted: Extracted = ean ? { ean } : await ocrExtractFromImageFile(file);
+  // 2) Hvis EAN: kun { ean }. Ellers: OCR-pakke -> { extracted, ocr_text, ocr_confidence }
+  let extracted: Extracted = {};
+  let ocr_text: string | undefined;
+  let ocr_confidence: number | undefined;
+
+  if (ean) {
+    extracted = { ean };
+  } else {
+    const ocr = await ocrExtractFromImageFile(file);
+    extracted = ocr?.extracted ?? {};
+    ocr_text = ocr?.ocr_text;
+    ocr_confidence = ocr?.ocr_confidence;
+  }
 
   const hasAnything = Object.values(extracted).some(
     (v) => v != null && String(v).trim().length > 0
   );
   if (!hasAnything) return null;
 
-  // 3) gem extracted
+  // 3) gem extracted (+ evt OCR metadata)
   const updRes = await fetch("/api/scan/update-extracted", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ sessionId, extracted }),
+    body: JSON.stringify({ sessionId, extracted, ocr_text, ocr_confidence }),
   });
 
   const updText = await updRes.text();
