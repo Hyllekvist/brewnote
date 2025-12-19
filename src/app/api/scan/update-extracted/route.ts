@@ -1,49 +1,44 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 
-type Extracted = {
-  brand?: string;
-  line?: string;
-  name?: string;
-  size_g?: number;
-  form?: "beans" | "ground";
-  intensity?: number;
-  arabica_pct?: number;
-  organic?: boolean;
-  ean?: string;
-};
-
 export async function POST(req: Request) {
-  const { sessionId, extracted } = (await req.json()) as {
-    sessionId?: string;
-    extracted?: Extracted;
-  };
+  const { sessionId, extracted } = await req.json();
 
-  if (!sessionId || !extracted) {
-    return NextResponse.json(
-      { error: "Missing sessionId/extracted" },
-      { status: 400 }
-    );
-  }
+  if (!sessionId) return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
 
   const supabase = supabaseServer();
 
-  // opdater session med brugerens rettelser + reset status
-  const { error: upErr } = await supabase
-    .from("scan_sessions")
-    .update({
-      extracted,
-      status: "needs_user",
-      resolved_variant_id: null,
-      resolution_confidence: null,
-    })
-    .eq("id", sessionId);
+  const { data: auth, error: aErr } = await supabase.auth.getUser();
+  const user = auth?.user;
+  if (aErr || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (upErr) {
-    return NextResponse.json({ error: upErr.message }, { status: 400 });
+  const { data: session, error: sErr } = await supabase
+    .from("scan_sessions")
+    .select("id,user_id")
+    .eq("id", sessionId)
+    .single();
+
+  if (sErr || !session) return NextResponse.json({ error: "Unknown session" }, { status: 404 });
+
+  // legacy claim
+  if (session.user_id == null) {
+    const { error: claimErr } = await supabase
+      .from("scan_sessions")
+      .update({ user_id: user.id })
+      .eq("id", sessionId);
+
+    if (claimErr) return NextResponse.json({ error: claimErr.message }, { status: 400 });
+    session.user_id = user.id;
   }
 
-  // kør resolve igen ved at kalde samme logik som process ville gøre:
-  // (MVP: vi genbruger /api/scan/process og lader den læse session.extracted hvis du opdaterer process)
+  if (session.user_id !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const { error: upErr } = await supabase
+    .from("scan_sessions")
+    .update({ extracted: extracted ?? {} })
+    .eq("id", sessionId);
+
+  if (upErr) return NextResponse.json({ error: upErr.message }, { status: 400 });
+
   return NextResponse.json({ ok: true });
 }
