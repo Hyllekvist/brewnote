@@ -167,52 +167,50 @@ export default function ScanClient() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-async function tryOcrFillExtractedAndReprocess(sessionId: string) {
-  if (!file) return null;
+  async function tryOcrFillExtractedAndReprocess(sessionId: string) {
+    if (!file) return null;
 
-  // OCR -> extracted
-  const ex = await ocrExtractFromImageFile(file);
+    const ex = await ocrExtractFromImageFile(file);
+    const hasAnything = Object.values(ex).some((v) => v != null && String(v).length > 0);
+    if (!hasAnything) return null;
 
-  // hvis OCR fandt ingenting, så giv op (bruger retter manuelt)
-  const hasAnything = Object.values(ex).some((v) => v != null && String(v).length > 0);
-  if (!hasAnything) return null;
+    const updRes = await fetch("/api/scan/update-extracted", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sessionId, extracted: ex }),
+    });
 
-  // gem extracted
-  const updRes = await fetch("/api/scan/update-extracted", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ sessionId, extracted: ex }),
-  });
+    const updText = await updRes.text();
+    const updJson = safeJson(updText);
+    if (!updRes.ok) {
+      throw new Error(`update-extracted ${updRes.status}: ${updJson?.error ?? updText}`);
+    }
 
-  const updText = await updRes.text();
-  const updJson = safeJson(updText);
-  if (!updRes.ok) throw new Error(`update-extracted ${updRes.status}: ${updJson?.error ?? updText}`);
+    const procRes2 = await fetch("/api/scan/process", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sessionId }),
+    });
 
-  // re-run process
-  const procRes2 = await fetch("/api/scan/process", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ sessionId }),
-  });
+    const text2 = await procRes2.text();
+    const j2 = safeJson(text2);
+    if (!procRes2.ok) throw new Error(`process ${procRes2.status}: ${j2?.error ?? text2}`);
 
-  const text2 = await procRes2.text();
-  const j2 = safeJson(text2);
-  if (!procRes2.ok) throw new Error(`process ${procRes2.status}: ${j2?.error ?? text2}`);
-
-  return j2 as ProcessResult;
-}
+    return j2 as ProcessResult;
+  }
 
   async function onScan() {
     setErr(null);
     setSavedMsg(null);
     setDetail(null);
     if (!file) return;
-  // ✅ kræv login før vi uploader/scanner
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth?.user) {
-    window.location.href = `/login?next=${encodeURIComponent("/scan")}`;
-    return;
-  }
+
+    // ✅ kræv login før vi uploader/scanner
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth?.user) {
+      window.location.href = `/login?next=${encodeURIComponent("/scan")}`;
+      return;
+    }
 
     setBusy(true);
     setStage("scanning");
@@ -252,31 +250,38 @@ async function tryOcrFillExtractedAndReprocess(sessionId: string) {
       const j = safeJson(text);
       if (!procRes.ok) throw new Error(`process ${procRes.status}: ${j?.error ?? text}`);
 
- let data = j as ProcessResult;
+      let data = j as ProcessResult;
 
-// Hvis process siger needs_user + extracted tom => prøv OCR (B)
-if (
-  data.status === "needs_user" &&
-  (!data.extracted || Object.keys(data.extracted || {}).length === 0)
-) {
-  // lille hint til UI
-  setSavedMsg("Læser tekst på posen…");
+      // ✅ fallback: needs_user + extracted tom => OCR + reprocess
+      if (
+        data.status === "needs_user" &&
+        (!data.extracted || Object.keys(data.extracted || {}).length === 0)
+      ) {
+        setSavedMsg("Læser tekst på posen…");
+        const nextData = await tryOcrFillExtractedAndReprocess(sessionId);
+        if (nextData) data = nextData;
+        setSavedMsg(null);
+      }
 
-  const nextData = await tryOcrFillExtractedAndReprocess(sessionId);
-  if (nextData) data = nextData;
+      setResult(data);
+      loadEditFromResult(data);
+      setEditOpen(false);
 
-  setSavedMsg(null);
-}
+      if (data.status === "resolved" && data.match?.variant_id) {
+        await loadDetails(data.match.variant_id);
+      } else {
+        setDetail(null);
+      }
 
-setResult(data);
-loadEditFromResult(data);
-setEditOpen(false);
-
-if (data.status === "resolved" && data.match?.variant_id) {
-  await loadDetails(data.match.variant_id);
-} else {
-  setDetail(null);
-}
+      setStage("done");
+      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
+    } catch (e: any) {
+      setErr(e?.message ?? "Noget gik galt");
+      setStage(file ? "ready" : "idle");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function saveExtracted() {
     if (!result?.sessionId) throw new Error("Missing sessionId");
