@@ -5,6 +5,7 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import BrewmasterPanel from "./BrewmasterPanel";
 import RateBrewPanel from "./RateBrewPanel";
 import styles from "./ScanClient.module.css";
+import { ocrExtractFromImageFile } from "@/lib/scan/ocrExtract";
 
 type Match = {
   product_id: string;
@@ -166,6 +167,41 @@ export default function ScanClient() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+async function tryOcrFillExtractedAndReprocess(sessionId: string) {
+  if (!file) return null;
+
+  // OCR -> extracted
+  const ex = await ocrExtractFromImageFile(file);
+
+  // hvis OCR fandt ingenting, så giv op (bruger retter manuelt)
+  const hasAnything = Object.values(ex).some((v) => v != null && String(v).length > 0);
+  if (!hasAnything) return null;
+
+  // gem extracted
+  const updRes = await fetch("/api/scan/update-extracted", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ sessionId, extracted: ex }),
+  });
+
+  const updText = await updRes.text();
+  const updJson = safeJson(updText);
+  if (!updRes.ok) throw new Error(`update-extracted ${updRes.status}: ${updJson?.error ?? updText}`);
+
+  // re-run process
+  const procRes2 = await fetch("/api/scan/process", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ sessionId }),
+  });
+
+  const text2 = await procRes2.text();
+  const j2 = safeJson(text2);
+  if (!procRes2.ok) throw new Error(`process ${procRes2.status}: ${j2?.error ?? text2}`);
+
+  return j2 as ProcessResult;
+}
+
   async function onScan() {
     setErr(null);
     setSavedMsg(null);
@@ -216,26 +252,31 @@ export default function ScanClient() {
       const j = safeJson(text);
       if (!procRes.ok) throw new Error(`process ${procRes.status}: ${j?.error ?? text}`);
 
-      const data = j as ProcessResult;
-      setResult(data);
-      loadEditFromResult(data);
-      setEditOpen(false);
+ let data = j as ProcessResult;
 
-      if (data.status === "resolved" && data.match?.variant_id) {
-        await loadDetails(data.match.variant_id);
-      } else {
-        setDetail(null);
-      }
+// Hvis process siger needs_user + extracted tom => prøv OCR (B)
+if (
+  data.status === "needs_user" &&
+  (!data.extracted || Object.keys(data.extracted || {}).length === 0)
+) {
+  // lille hint til UI
+  setSavedMsg("Læser tekst på posen…");
 
-      setStage("done");
-      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
-    } catch (e: any) {
-      setErr(e?.message ?? "Noget gik galt");
-      setStage(file ? "ready" : "idle");
-    } finally {
-      setBusy(false);
-    }
-  }
+  const nextData = await tryOcrFillExtractedAndReprocess(sessionId);
+  if (nextData) data = nextData;
+
+  setSavedMsg(null);
+}
+
+setResult(data);
+loadEditFromResult(data);
+setEditOpen(false);
+
+if (data.status === "resolved" && data.match?.variant_id) {
+  await loadDetails(data.match.variant_id);
+} else {
+  setDetail(null);
+}
 
   async function saveExtracted() {
     if (!result?.sessionId) throw new Error("Missing sessionId");
