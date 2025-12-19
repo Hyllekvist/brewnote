@@ -16,7 +16,6 @@ type Extracted = {
 function fingerprintFromExtracted(ex: Extracted) {
   const norm = (s?: string) =>
     (s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
-
   return [
     `b:${norm(ex.brand)}`,
     `l:${norm(ex.line)}`,
@@ -29,26 +28,26 @@ function fingerprintFromExtracted(ex: Extracted) {
 export async function POST(req: Request) {
   const { sessionId, variantId } = await req.json();
 
-  if (!sessionId) return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
-  if (!variantId) return NextResponse.json({ error: "Missing variantId" }, { status: 400 });
+  if (!sessionId || !variantId) {
+    return NextResponse.json({ error: "Missing sessionId/variantId" }, { status: 400 });
+  }
 
   const supabase = supabaseServer();
 
-  // auth
   const { data: auth, error: aErr } = await supabase.auth.getUser();
   const user = auth?.user;
   if (aErr || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // load session (ownership)
+  // session + ownership
   const { data: session, error: sErr } = await supabase
     .from("scan_sessions")
-    .select("id,user_id,extracted,image_path")
+    .select("id,user_id,extracted")
     .eq("id", sessionId)
     .single();
 
   if (sErr || !session) return NextResponse.json({ error: "Unknown session" }, { status: 404 });
 
-  // legacy claim (hvis gamle sessions har user_id null)
+  // legacy claim
   if (session.user_id == null) {
     const { error: claimErr } = await supabase
       .from("scan_sessions")
@@ -62,48 +61,46 @@ export async function POST(req: Request) {
   if (session.user_id !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const extracted = (session.extracted ?? {}) as Extracted;
-  if (!extracted || Object.keys(extracted).length === 0) {
+  const fp = fingerprintFromExtracted(extracted);
+
+  if (!fp || fp.includes("b:|") || fp.includes("n:|")) {
     return NextResponse.json(
-      { error: "No extracted data on session (nothing to learn from yet)." },
+      { error: "Kan ikke lære: mangler brand/name i extracted." },
       { status: 400 }
     );
   }
 
-  // sanity: variant must exist
-  const { data: vRow, error: vErr } = await supabase
+  // verify variant exists
+  const { data: v, error: vErr } = await supabase
     .from("product_variants")
-    .select("id, product_id")
+    .select("id")
     .eq("id", variantId)
     .single();
 
-  if (vErr || !vRow) return NextResponse.json({ error: "Unknown variantId" }, { status: 404 });
+  if (vErr || !v) return NextResponse.json({ error: "Unknown variant" }, { status: 404 });
 
-  // update session -> resolved
-  const confidence = 0.95;
-  const status = "resolved";
+  // ✅ LÆRING (kun her)
+  const { error: fpErr } = await supabase
+    .from("scan_fingerprints")
+    .upsert(
+      { fingerprint: fp, variant_id: variantId, confirmed_by: user.id, confirmed_at: new Date().toISOString() },
+      { onConflict: "fingerprint" }
+    );
 
+  if (fpErr) return NextResponse.json({ error: fpErr.message }, { status: 400 });
+
+  // mark session resolved
+  const confidence = 0.97;
   const { error: upErr } = await supabase
     .from("scan_sessions")
     .update({
       resolved_variant_id: variantId,
       resolution_confidence: confidence,
-      status,
+      status: "resolved",
     })
     .eq("id", sessionId);
 
   if (upErr) return NextResponse.json({ error: upErr.message }, { status: 400 });
 
-  // learning: fingerprint -> variant
-  const fp = fingerprintFromExtracted(extracted);
-  await supabase.from("scan_fingerprints").upsert(
-    { fingerprint: fp, variant_id: variantId },
-    { onConflict: "fingerprint" }
-  );
-
-  return NextResponse.json({
-    ok: true,
-    sessionId,
-    variantId,
-    confidence,
-  });
+  return NextResponse.json({ ok: true, confidence });
 }
