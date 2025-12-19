@@ -48,6 +48,12 @@ function fingerprintFromExtracted(ex: Extracted) {
   ].join("|");
 }
 
+async function requireUser(supabase: any) {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data?.user) return null;
+  return data.user;
+}
+
 export async function POST(req: Request) {
   const { sessionId } = await req.json();
 
@@ -56,6 +62,10 @@ export async function POST(req: Request) {
   }
 
   const supabase = supabaseServer();
+
+  // ✅ auth
+  const user = await requireUser(supabase);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // 1) hent session
   const { data: session, error: sErr } = await supabase
@@ -68,23 +78,40 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unknown session" }, { status: 404 });
   }
 
- // Brug eksisterende extracted hvis brugeren allerede har rettet (ellers fallback til mock)
-const extracted: Extracted =
-  (session.extracted && Object.keys(session.extracted).length > 0)
-    ? (session.extracted as Extracted)
-    : {
-        brand: "Lavazza",
-        line: "Tierra!",
-        name: "Bio-Organic",
-        size_g: 500,
-        form: "beans",
-        intensity: 6,
-        arabica_pct: 100,
-        organic: true,
-      };
+  // ✅ ownership hardening (legacy fix hvis user_id == null)
+  if (session.user_id == null) {
+    const { error: claimErr } = await supabase
+      .from("scan_sessions")
+      .update({ user_id: user.id })
+      .eq("id", sessionId);
 
+    if (claimErr) {
+      return NextResponse.json({ error: claimErr.message }, { status: 400 });
+    }
 
-  // 2.5) LÆRING LOOKUP (fingerprint -> variant)
+    session.user_id = user.id;
+  }
+
+  if (session.user_id !== user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // Brug eksisterende extracted hvis brugeren allerede har rettet (ellers fallback til mock)
+  const extracted: Extracted =
+    (session.extracted && Object.keys(session.extracted).length > 0)
+      ? (session.extracted as Extracted)
+      : {
+          brand: "Lavazza",
+          line: "Tierra!",
+          name: "Bio-Organic",
+          size_g: 500,
+          form: "beans",
+          intensity: 6,
+          arabica_pct: 100,
+          organic: true,
+        };
+
+  // 2) fingerprint lookup
   const fp = fingerprintFromExtracted(extracted);
 
   const { data: fpRow } = await supabase
@@ -110,9 +137,7 @@ const extracted: Extracted =
         })
         .eq("id", sessionId);
 
-      if (upErr) {
-        return NextResponse.json({ error: upErr.message }, { status: 400 });
-      }
+      if (upErr) return NextResponse.json({ error: upErr.message }, { status: 400 });
 
       return NextResponse.json({
         status,
@@ -126,15 +151,9 @@ const extracted: Extracted =
   }
 
   // 3) resolve + suggestions
-  const { match, suggestions } = await resolveVariantWithSuggestions(
-    supabase,
-    extracted
-  );
+  const { match, suggestions } = await resolveVariantWithSuggestions(supabase, extracted);
 
-  const status: "resolved" | "needs_user" | "failed" = match
-    ? "resolved"
-    : "needs_user";
-
+  const status: "resolved" | "needs_user" | "failed" = match ? "resolved" : "needs_user";
   const confidence = match ? 0.9 : suggestions.length ? 0.55 : 0.35;
 
   // 4) persist session
@@ -148,17 +167,12 @@ const extracted: Extracted =
     })
     .eq("id", sessionId);
 
-  if (upErr) {
-    return NextResponse.json({ error: upErr.message }, { status: 400 });
-  }
+  if (upErr) return NextResponse.json({ error: upErr.message }, { status: 400 });
 
   // 5) LÆRING UPSERT (kun når resolved)
   if (match?.variant_id) {
     await supabase.from("scan_fingerprints").upsert(
-      {
-        fingerprint: fp,
-        variant_id: match.variant_id,
-      },
+      { fingerprint: fp, variant_id: match.variant_id },
       { onConflict: "fingerprint" }
     );
   }
@@ -176,18 +190,13 @@ const extracted: Extracted =
 async function matchByVariantId(supabase: any, variantId: string): Promise<Match | null> {
   const { data, error } = await supabase
     .from("product_variants")
-    .select(
-      "id, size_g, form, intensity, arabica_pct, organic, products(id, brand, line, name)"
-    )
+    .select("id, size_g, form, intensity, arabica_pct, organic, products(id, brand, line, name)")
     .eq("id", variantId)
     .single();
 
   if (error || !data) return null;
 
-  const p = Array.isArray((data as any).products)
-    ? (data as any).products[0]
-    : (data as any).products;
-
+  const p = Array.isArray((data as any).products) ? (data as any).products[0] : (data as any).products;
   if (!p) return null;
 
   return {
@@ -208,7 +217,7 @@ async function resolveVariantWithSuggestions(
   supabase: any,
   ex: Extracted
 ): Promise<{ match: Match | null; suggestions: Suggestion[] }> {
-  // A) barcode match (senere)
+  // A) barcode match
   if (ex.ean) {
     const { data: rows } = await supabase
       .from("product_barcodes")
@@ -241,7 +250,7 @@ async function resolveVariantWithSuggestions(
     }
   }
 
-  // B) fuzzy product match (brand + name + line)
+  // B) fuzzy product match
   const brandQ = ex.brand ? `%${ex.brand}%` : "%";
   const nameQ = ex.name ? `%${ex.name}%` : "%";
   const lineQ = ex.line ? `%${ex.line}%` : "%";
@@ -256,7 +265,6 @@ async function resolveVariantWithSuggestions(
 
   if (!products?.length) return { match: null, suggestions: [] };
 
-  // Vælg produktet der faktisk har varianter (undgår duplicates)
   let bestProduct: any = null;
   let bestVariants: any[] = [];
 
@@ -271,7 +279,6 @@ async function resolveVariantWithSuggestions(
       bestProduct = cand;
       bestVariants = vars ?? [];
     }
-
     if ((vars?.length ?? 0) > 0) break;
   }
 
@@ -293,7 +300,6 @@ async function resolveVariantWithSuggestions(
     };
   }
 
-  // D) exact variant match på size + form
   const exact = variants.find((v: any) => {
     const sizeOk = ex.size_g ? v.size_g === ex.size_g : true;
     const formOk = ex.form ? v.form === ex.form : true;
