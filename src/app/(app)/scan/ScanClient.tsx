@@ -370,6 +370,70 @@ export default function ScanClient() {
     }
   }
 
+async function onConfirmSuggestion(variantId: string) {
+  if (!result?.sessionId) return;
+
+  setErr(null);
+  setSavedMsg(null);
+  setBusy(true);
+
+  try {
+    const res = await fetch("/api/scan/confirm-variant", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sessionId: result.sessionId, variantId }),
+    });
+
+    const text = await res.text();
+    const j = safeJson(text);
+    if (res.status === 401) throw new Error("Du skal være logget ind.");
+    if (!res.ok) throw new Error(j?.error ?? text);
+
+    // opdater result lokalt → resolved
+    setResult((prev) =>
+      prev
+        ? {
+            ...prev,
+            status: "resolved",
+            confidence: j?.confidence ?? 0.95,
+            match: prev.match ?? null, // bliver sat korrekt når vi re-run process eller når detail loader
+            suggestions: [],
+          }
+        : prev
+    );
+
+    // hent details (også så BrewmasterPanel + rating får det rigtige)
+    await loadDetails(variantId);
+
+    // og opdater match i UI så alt er konsistent
+    setResult((prev) =>
+      prev
+        ? {
+            ...prev,
+            status: "resolved",
+            confidence: j?.confidence ?? prev.confidence,
+            match: prev.match
+              ? { ...prev.match, variant_id: variantId }
+              : { product_id: "", variant_id: variantId, brand: "", name: "" },
+            suggestions: [],
+          }
+        : prev
+    );
+
+    setSavedMsg("Valgt ✓ (BrewNote lærer af det)");
+    setEditOpen(false);
+
+    setTimeout(
+      () => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      120
+    );
+  } catch (e: any) {
+    setErr(e?.message ?? "Noget gik galt");
+  } finally {
+    setBusy(false);
+  }
+}
+
   // ✅ V8: ægte feedback efter rating + instant refresh uden “fake” update
   async function onRatingSaved() {
     const vid = detail?.variant?.id || result?.match?.variant_id;
@@ -495,22 +559,52 @@ export default function ScanClient() {
             missingText={missingText}
           />
 
-          <RateBrewPanel
-            sessionId={result.sessionId}
-            productId={result.match?.product_id ?? null}
-            variantId={result.match?.variant_id ?? null}
-            onSaved={onRatingSaved}
-          />
+{result.status === "needs_user" && (result.suggestions?.length ?? 0) > 0 && (
+  <section className={styles.card} style={{ padding: 16 }}>
+    <div style={{ fontWeight: 850, marginBottom: 8 }}>Vælg den rigtige</div>
+    <div style={{ opacity: 0.7, fontSize: 13, marginBottom: 12 }}>
+      Jeg er ikke sikker — vælg én, så bliver den fremover nemmere at genkende.
+    </div>
 
-          <section className={styles.card}>
-            <button
-              className={styles.secondaryBtn}
-              onClick={onSaveToInventory}
-              disabled={busy || !canSaveInventory}
-            >
-              {busy ? "Gemmer…" : "Gem i inventory"}
-            </button>
-          </section>
+    <div style={{ display: "grid", gap: 10 }}>
+      {result.suggestions!.map((s) => (
+        <button
+          key={s.variant_id || s.label}
+          className={styles.secondaryBtn}
+          onClick={() => onConfirmSuggestion(s.variant_id)}
+          disabled={busy || !s.variant_id}
+          style={{ justifyContent: "space-between", display: "flex" }}
+        >
+          <span>{s.label}</span>
+          <span style={{ opacity: 0.7, fontWeight: 800 }}>
+            {Math.round((s.confidence ?? 0.55) * 100)}%
+          </span>
+        </button>
+      ))}
+    </div>
+  </section>
+)}
+
+{result.status === "resolved" && (detail?.variant?.id || result.match?.variant_id) && (
+  <RateBrewPanel
+    sessionId={result.sessionId}
+    productId={result.match?.product_id ?? null}
+    variantId={result.match?.variant_id ?? null}
+    onSaved={onRatingSaved}
+  />
+)}
+
+       {result.status === "resolved" && (
+  <section className={styles.card}>
+    <button
+      className={styles.secondaryBtn}
+      onClick={onSaveToInventory}
+      disabled={busy || !canSaveInventory}
+    >
+      {busy ? "Gemmer…" : "Gem i inventory"}
+    </button>
+  </section>
+)}
 
           <section className={styles.card}>
             <button className={styles.accordionHeader} onClick={() => setEditOpen((v) => !v)}>
