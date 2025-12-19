@@ -171,6 +171,12 @@ export default function ScanClient() {
     setSavedMsg(null);
     setDetail(null);
     if (!file) return;
+  // ✅ kræv login før vi uploader/scanner
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth?.user) {
+    window.location.href = `/login?next=${encodeURIComponent("/scan")}`;
+    return;
+  }
 
     setBusy(true);
     setStage("scanning");
@@ -196,7 +202,7 @@ export default function ScanClient() {
 
       const { error: upErr } = await supabase.storage.from("scans").upload(uploadPath, file, {
         contentType: file.type || "image/jpeg",
-        upsert: true,
+        upsert: false,
       });
       if (upErr) throw new Error(`upload: ${upErr.message}`);
 
