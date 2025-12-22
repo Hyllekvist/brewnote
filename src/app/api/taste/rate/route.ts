@@ -9,6 +9,18 @@ type RateBody = {
   stars: number; // 1..5
 };
 
+type TasteVec = {
+  b: number; // bitterness
+  a: number; // acidity
+  s: number; // sweetness
+  m: number; // mouthfeel/body
+  r: number; // aroma intensity
+  c: number; // clarity/clean finish
+  t?: number; // astringency (tea only)
+};
+
+type TasteVecDB = Record<string, unknown>;
+
 const EPS = 1e-6;
 
 const AXES_CORE = ["b", "a", "s", "m", "r", "c"] as const;
@@ -24,7 +36,7 @@ function clamp01(x: number) {
 }
 
 function sigmoid(z: number) {
-  // stable-ish sigmoid
+  // numerically stable-ish sigmoid
   if (z >= 0) {
     const ez = Math.exp(-z);
     return 1 / (1 + ez);
@@ -39,86 +51,116 @@ function starsToY(stars: number) {
   return (stars - 1) / 4;
 }
 
-function defaultP(domain: Domain) {
-  // “good enough” cold-start vectors
-  if (domain === "coffee") {
-    return { b: 0.55, a: 0.45, s: 0.35, m: 0.55, r: 0.6, c: 0.45 };
-  }
-  return { b: 0.35, a: 0.35, s: 0.2, m: 0.25, r: 0.6, c: 0.75, t: 0.4 };
-}
-
-function initMu(domain: Domain) {
-  // neutral start: mid-ish
-  const base: Record<string, number> = { b: 0.5, a: 0.5, s: 0.4, m: 0.5, r: 0.5, c: 0.5 };
-  if (domain === "tea") base.t = 0.5;
-  return base;
-}
-
-function initSigma(domain: Domain) {
-  // higher sigma = more uncertainty = learn faster
-  const base: Record<string, number> = { b: 0.35, a: 0.35, s: 0.35, m: 0.35, r: 0.35, c: 0.35 };
-  if (domain === "tea") base.t = 0.35;
-  return base;
-}
-
 function axesFor(domain: Domain) {
   return domain === "tea" ? AXES_TEA : AXES_CORE;
 }
 
-function computeDistance(domain: Domain, p: Record<string, number>, mu: Record<string, number>, sigma: Record<string, number>) {
+function defaultP(domain: Domain): TasteVec {
+  return domain === "coffee"
+    ? { b: 0.55, a: 0.45, s: 0.35, m: 0.55, r: 0.6, c: 0.45 }
+    : { b: 0.35, a: 0.35, s: 0.2, m: 0.25, r: 0.6, c: 0.75, t: 0.4 };
+}
+
+function initMu(domain: Domain): TasteVec {
+  const base: TasteVec = { b: 0.5, a: 0.5, s: 0.4, m: 0.5, r: 0.5, c: 0.5 };
+  if (domain === "tea") base.t = 0.5;
+  return base;
+}
+
+function initSigma(domain: Domain): TasteVec {
+  // higher = more uncertain = learn faster
+  const base: TasteVec = { b: 0.35, a: 0.35, s: 0.35, m: 0.35, r: 0.35, c: 0.35 };
+  if (domain === "tea") base.t = 0.35;
+  return base;
+}
+
+function asNum(v: unknown, fallback: number) {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function sanitizeVec(domain: Domain, raw: TasteVecDB | null | undefined, fallback: TasteVec): TasteVec {
+  if (!raw || typeof raw !== "object") return fallback;
+
+  const v = raw as TasteVecDB;
+  const out: TasteVec = {
+    b: clamp01(asNum(v.b, fallback.b)),
+    a: clamp01(asNum(v.a, fallback.a)),
+    s: clamp01(asNum(v.s, fallback.s)),
+    m: clamp01(asNum(v.m, fallback.m)),
+    r: clamp01(asNum(v.r, fallback.r)),
+    c: clamp01(asNum(v.c, fallback.c)),
+  };
+
+  if (domain === "tea") {
+    out.t = clamp01(asNum(v.t, fallback.t ?? 0.5));
+  }
+  return out;
+}
+
+function computeDistance(domain: Domain, p: TasteVec, mu: TasteVec, sigma: TasteVec) {
   const w = WEIGHTS[domain];
   let D = 0;
+
   for (const k of axesFor(domain)) {
-    const pi = clamp01(Number(p[k] ?? 0.5));
-    const mui = clamp01(Number(mu[k] ?? 0.5));
-    const si = Math.max(0.08, Number(sigma[k] ?? 0.35)); // sigma floor
-    const wi = Number(w[k] ?? 1.0);
+    const key = k as keyof TasteVec;
+
+    const pi = clamp01(Number(p[key] ?? 0.5));
+    const mui = clamp01(Number(mu[key] ?? 0.5));
+
+    // sigma floor (avoid exploding gradients)
+    const si = Math.max(0.08, Number(sigma[key] ?? 0.35));
+    const wi = Number(w[String(k)] ?? 1.0);
+
     const diff = pi - mui;
     D += wi * (diff * diff) / (si * si + EPS);
   }
+
   return D;
 }
 
 function updateProfile(params: {
   domain: Domain;
   stars: number;
-  p: Record<string, number>;
-  mu: Record<string, number>;
-  sigma: Record<string, number>;
+  p: TasteVec;
+  mu: TasteVec;
+  sigma: TasteVec;
   beta: number;
 }) {
-  const { domain, stars } = params;
+  const { domain, stars, p, mu, sigma, beta } = params;
   const w = WEIGHTS[domain];
 
   const y = starsToY(stars);
-  const D = computeDistance(domain, params.p, params.mu, params.sigma);
-  const yHat = sigmoid(params.beta - D);
+  const D = computeDistance(domain, p, mu, sigma);
+  const yHat = sigmoid(beta - D);
 
-  // learning rate + conservative sigma tightening
-  const eta = 0.06; // overall step size
-  const lambda = 0.04;
+  // learning + conservative sigma tightening
+  const eta = 0.06; // main step size
+  const lambda = 0.04; // sigma tighten rate
 
-  const nextMu = { ...params.mu };
-  const nextSigma = { ...params.sigma };
+  const nextMu: TasteVec = { ...mu };
+  const nextSigma: TasteVec = { ...sigma };
 
   for (const k of axesFor(domain)) {
-    const pi = clamp01(Number(params.p[k] ?? 0.5));
-    const mui = clamp01(Number(params.mu[k] ?? 0.5));
-    const si = Math.max(0.08, Number(params.sigma[k] ?? 0.35));
-    const wi = Number(w[k] ?? 1.0);
+    const key = k as keyof TasteVec;
+
+    const pi = clamp01(Number(p[key] ?? 0.5));
+    const mui = clamp01(Number(mu[key] ?? 0.5));
+    const si = Math.max(0.08, Number(sigma[key] ?? 0.35));
+    const wi = Number(w[String(k)] ?? 1.0);
 
     // gradient step towards/away from p depending on (y - yHat)
     const grad = (y - yHat) * wi * (pi - mui) / (si * si + EPS);
-    nextMu[k] = clamp01(mui + eta * grad);
+    nextMu[key] = clamp01(mui + eta * grad);
 
     // shrink sigma slightly when we learn something (surprise)
     const tighten = 1 - lambda * Math.abs(y - yHat);
-    nextSigma[k] = Math.max(0.08, si * tighten);
+    nextSigma[key] = Math.max(0.08, si * tighten);
   }
 
-  // update beta (user bias) so “always rates high/low” doesn’t distort mu
+  // update beta (user bias): handles “always rates high/low”
   const betaEta = 0.15;
-  const nextBeta = params.beta + betaEta * (y - yHat);
+  const nextBeta = beta + betaEta * (y - yHat);
 
   return { y, yHat, D, mu: nextMu, sigma: nextSigma, beta: nextBeta };
 }
@@ -155,19 +197,23 @@ export async function POST(req: Request) {
   }
 
   // 1) ensure we have a product vector p for this variant
-  let p = defaultP(domain);
+  let p: TasteVec = defaultP(domain);
 
-  const { data: vt } = await supabase
+  const { data: vt, error: vtErr } = await supabase
     .from("variant_taste_vectors")
     .select("p, domain")
     .eq("variant_id", body.variant_id)
     .maybeSingle();
 
+  if (vtErr) {
+    return NextResponse.json({ error: vtErr.message }, { status: 400 });
+  }
+
   if (vt?.p && (vt.domain === domain || !vt.domain)) {
-    p = vt.p as Record<string, number>;
+    p = sanitizeVec(domain, vt.p as TasteVecDB, defaultP(domain));
   } else {
     // seed if missing
-    await supabase.from("variant_taste_vectors").upsert(
+    const { error: seedErr } = await supabase.from("variant_taste_vectors").upsert(
       {
         variant_id: body.variant_id,
         domain,
@@ -177,6 +223,10 @@ export async function POST(req: Request) {
       },
       { onConflict: "variant_id" }
     );
+
+    if (seedErr) {
+      return NextResponse.json({ error: seedErr.message }, { status: 400 });
+    }
   }
 
   // 2) write rating row
@@ -192,15 +242,25 @@ export async function POST(req: Request) {
   }
 
   // 3) load user profile and update
-  const { data: prof } = await supabase
+  const { data: prof, error: profErr } = await supabase
     .from("user_domain_profiles")
     .select("mu, sigma, beta")
     .eq("user_id", user_id)
     .eq("domain", domain)
     .maybeSingle();
 
-  const mu = (prof?.mu as Record<string, number>) ?? initMu(domain);
-  const sigma = (prof?.sigma as Record<string, number>) ?? initSigma(domain);
+  if (profErr) {
+    return NextResponse.json({ error: profErr.message }, { status: 400 });
+  }
+
+  const mu: TasteVec = prof?.mu
+    ? sanitizeVec(domain, prof.mu as TasteVecDB, initMu(domain))
+    : initMu(domain);
+
+  const sigma: TasteVec = prof?.sigma
+    ? sanitizeVec(domain, prof.sigma as TasteVecDB, initSigma(domain))
+    : initSigma(domain);
+
   const beta = Number(prof?.beta ?? 0.0);
 
   const updated = updateProfile({ domain, stars, p, mu, sigma, beta });
