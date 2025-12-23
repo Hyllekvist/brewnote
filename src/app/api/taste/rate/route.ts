@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 
-type Domain = "coffee" | "tea"; 
+type Domain = "coffee" | "tea";
+type Quick = "sour" | "balanced" | "bitter" | null;
 
 type RateBody = {
   variant_id: string;
@@ -9,6 +10,7 @@ type RateBody = {
   stars: number; // 1..5
   product_slug?: string;
   label?: string;
+  quick?: Quick;
 };
 
 type TasteVec = {
@@ -159,6 +161,10 @@ function updateProfile(params: {
   return { y, yHat, D, mu: nextMu, sigma: nextSigma, beta: nextBeta };
 }
 
+function bump01(x: number, d: number) {
+  return clamp01(x + d);
+}
+
 export async function POST(req: Request) {
   const supabase = await supabaseServer();
 
@@ -206,7 +212,7 @@ export async function POST(req: Request) {
   if (vt?.p && (vt.domain === domain || !vt.domain)) {
     p = sanitizeVec(domain, vt.p as TasteVecDB, defaultP(domain));
 
-    // Optional: update metadata if provided and missing
+    // optional: update metadata if provided and missing
     if ((body.product_slug || body.label) && (!vt.product_slug || !vt.label)) {
       const { error: metaErr } = await supabase
         .from("variant_taste_vectors")
@@ -276,6 +282,31 @@ export async function POST(req: Request) {
   const beta = Number(prof?.beta ?? 0.0);
 
   const updated = updateProfile({ domain, stars, p, mu, sigma, beta });
+
+  // 4) apply quick feedback nudges (small + controlled)
+  const quick: Quick = (body.quick ?? null) as Quick;
+
+  if (quick === "sour") {
+    // "for sur" -> prefer lower acidity
+    updated.mu.a = bump01(updated.mu.a ?? 0.5, -0.03);
+    updated.sigma.a = Math.max(0.10, (updated.sigma.a ?? 0.35) * 0.97);
+  } else if (quick === "bitter") {
+    // "for bitter" -> prefer lower bitterness
+    updated.mu.b = bump01(updated.mu.b ?? 0.5, -0.03);
+    updated.sigma.b = Math.max(0.10, (updated.sigma.b ?? 0.35) * 0.97);
+  } else if (quick === "balanced") {
+    // "perfekt" -> increase confidence slightly across axes
+    const keys = domain === "tea"
+      ? (["b", "a", "s", "m", "r", "c", "t"] as const)
+      : (["b", "a", "s", "m", "r", "c"] as const);
+
+    for (const k of keys) {
+      const key = k as keyof TasteVec;
+      // sigma exists on same keys as TasteVec
+      // @ts-expect-error (fine: TasteVec aligns)
+      updated.sigma[key] = Math.max(0.10, (updated.sigma[key] ?? 0.35) * 0.98);
+    }
+  }
 
   const { error: upErr } = await supabase.from("user_domain_profiles").upsert(
     {
