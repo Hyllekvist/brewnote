@@ -47,6 +47,15 @@ function prettyNameFromSlug(slug: string) {
   return slug ? decodeURIComponent(slug).replace(/-/g, " ") : "Brew";
 }
 
+type TopPick = {
+  variant_id: string;
+  product_slug?: string | null;
+  label?: string | null;
+  score: number;
+  dist: number;
+  why?: string[]; // ✅ fra recommend-route
+};
+
 export default function BrewReviewClient({
   type,
   slug,
@@ -70,13 +79,7 @@ export default function BrewReviewClient({
   const [isSaving, setIsSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
 
-  const [topPick, setTopPick] = useState<null | {
-    variant_id: string;
-    product_slug?: string | null;
-    label?: string | null;
-    score: number;
-    dist: number;
-  }>(null);
+  const [topPick, setTopPick] = useState<TopPick | null>(null);
 
   const backHref = slug ? `/coffees/${encodeURIComponent(slug)}` : "/";
 
@@ -97,7 +100,8 @@ export default function BrewReviewClient({
           stars: rating,
           product_slug: slug,
           label: name,
-quick: quick,
+          quick, // ✅
+          // note gemmer vi senere i /api/brew/review
         }),
       });
 
@@ -107,21 +111,15 @@ quick: quick,
       setSaveMsg("Review gemt. Vi lærer din smag…");
 
       // 2) hent top pick
-      const rec = await fetch(`/api/taste/recommend?domain=${domain}&limit=1`, {
-        method: "GET",
-      });
+      const rec = await fetch(`/api/taste/recommend?domain=${domain}&limit=1`, { method: "GET" });
       const recJson = await rec.json().catch(() => ({}));
 
       if (rec.ok && recJson?.ok && Array.isArray(recJson.items) && recJson.items[0]) {
-        setTopPick(recJson.items[0]);
+        setTopPick(recJson.items[0] as TopPick);
         setSaveMsg("Gemte. Her er dit bedste match lige nu:");
       } else {
-        // Hvis ingen profil endnu / ingen candidates
         setSaveMsg("Gemte. Giv 1-2 reviews mere for at få anbefalinger.");
       }
-
-      // NOTE: quick + note gemmer vi ikke endnu — men vi kan senere lave /api/brew/review der skriver til Supabase
-      // quick kan bruges til at finjustere: sour/bitter => justér acidity/bitterness i p eller mu (senere)
     } catch (e: any) {
       setSaveMsg(e?.message || "Noget gik galt");
     } finally {
@@ -130,9 +128,9 @@ quick: quick,
   }
 
   const topPickHref =
-    topPick?.product_slug
-      ? `/brew/${domain}/${encodeURIComponent(topPick.product_slug)}`
-      : null;
+    topPick?.product_slug ? `/brew/${domain}/${encodeURIComponent(topPick.product_slug)}` : null;
+
+  const whyLine = topPick?.why?.length ? topPick.why.slice(0, 3).join(" · ") : null;
 
   return (
     <main className={styles.page}>
@@ -208,7 +206,6 @@ quick: quick,
           />
         </label>
 
-        {/* ✅ Feedback + recommendation */}
         {saveMsg ? <div style={{ marginTop: 10, fontSize: 13, opacity: 0.9 }}>{saveMsg}</div> : null}
 
         {topPick ? (
@@ -224,12 +221,21 @@ quick: quick,
             }}
           >
             <div style={{ fontSize: 12, opacity: 0.75 }}>TOP PICK FOR YOU</div>
+
             <div style={{ fontWeight: 800 }}>
               {topPick.label || prettyNameFromSlug(String(topPick.product_slug || "")) || "Recommended"}
             </div>
+
             <div style={{ fontSize: 12, opacity: 0.8 }}>
               Match: {Math.round((topPick.score ?? 0) * 100)}%
             </div>
+
+            {whyLine ? (
+              <div style={{ fontSize: 12, opacity: 0.75 }}>
+                {whyLine}
+              </div>
+            ) : null}
+
             {topPickHref ? (
               <a
                 href={topPickHref}
@@ -246,12 +252,7 @@ quick: quick,
           <a className={styles.secondary} href={backHref}>
             Spring over
           </a>
-          <button
-            className={styles.primary}
-            type="button"
-            onClick={saveReview}
-            disabled={rating === 0 || isSaving}
-          >
+          <button className={styles.primary} type="button" onClick={saveReview} disabled={rating === 0 || isSaving}>
             {isSaving ? "Gemmer..." : "Gem review"}
           </button>
         </div>
