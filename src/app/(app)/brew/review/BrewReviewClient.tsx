@@ -149,18 +149,21 @@ export default function BrewReviewClient({
 
     try {
       // 1) lær profilen (taste/rate)
-      const res = await fetch("/api/taste/rate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          variant_id: variantId,
-          domain,
-          stars: rating,
-          product_slug: slug,
-          label: name,
-          quick,
-        }),
-      });
+      const user_key = getUserKey();
+
+const res = await fetch("/api/taste/rate", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    user_key, // ✅ vigtigt for taste_ratings
+    variant_id: variantId,
+    domain,
+    stars: rating,
+    product_slug: slug,
+    label: name,
+    quick,
+  }),
+});
 
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || "Kunne ikke gemme rating");
