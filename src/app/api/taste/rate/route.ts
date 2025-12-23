@@ -11,16 +11,19 @@ type RateBody = {
   product_slug?: string;
   label?: string;
   quick?: Quick;
+
+  // ✅ optional: kun til taste_ratings (anon bridge)
+  user_key?: string; // fra client localStorage (hvis I vil logge taste_ratings)
 };
 
 type TasteVec = {
-  b: number; // bitterness
-  a: number; // acidity
-  s: number; // sweetness
-  m: number; // mouthfeel/body
-  r: number; // aroma intensity
-  c: number; // clarity/clean finish
-  t?: number; // astringency (tea only)
+  b: number;
+  a: number;
+  s: number;
+  m: number;
+  r: number;
+  c: number;
+  t?: number;
 };
 
 type TasteVecDB = Record<string, unknown>;
@@ -96,10 +99,7 @@ function sanitizeVec(domain: Domain, raw: TasteVecDB | null | undefined, fallbac
     c: clamp01(asNum(v.c, fallback.c)),
   };
 
-  if (domain === "tea") {
-    out.t = clamp01(asNum(v.t, fallback.t ?? 0.5));
-  }
-
+  if (domain === "tea") out.t = clamp01(asNum(v.t, fallback.t ?? 0.5));
   return out;
 }
 
@@ -112,7 +112,7 @@ function computeDistance(domain: Domain, p: TasteVec, mu: TasteVec, sigma: Taste
 
     const pi = clamp01(Number(p[key] ?? 0.5));
     const mui = clamp01(Number(mu[key] ?? 0.5));
-    const si = Math.max(0.08, Number(sigma[key] ?? 0.35)); // floor
+    const si = Math.max(0.08, Number(sigma[key] ?? 0.35));
     const wi = Number(w[String(k)] ?? 1.0);
 
     const diff = pi - mui;
@@ -172,9 +172,7 @@ export async function POST(req: Request) {
   const supabase = await supabaseServer();
 
   const { data: auth, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !auth?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (authErr || !auth?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user_id = auth.user.id;
 
   let body: RateBody;
@@ -187,12 +185,8 @@ export async function POST(req: Request) {
   const domain = body.domain;
   const stars = Number(body.stars);
 
-  if (domain !== "coffee" && domain !== "tea") {
-    return NextResponse.json({ error: "Invalid domain" }, { status: 400 });
-  }
-  if (!body.variant_id) {
-    return NextResponse.json({ error: "Missing variant_id" }, { status: 400 });
-  }
+  if (domain !== "coffee" && domain !== "tea") return NextResponse.json({ error: "Invalid domain" }, { status: 400 });
+  if (!body.variant_id) return NextResponse.json({ error: "Missing variant_id" }, { status: 400 });
   if (!Number.isFinite(stars) || stars < 1 || stars > 5) {
     return NextResponse.json({ error: "Stars must be 1..5" }, { status: 400 });
   }
@@ -236,19 +230,33 @@ export async function POST(req: Request) {
       },
       { onConflict: "variant_id" }
     );
-
     if (seedErr) return NextResponse.json({ error: seedErr.message }, { status: 400 });
   }
 
-  // 2) write rating row
-  const { error: insErr } = await supabase.from("taste_ratings").insert({
-    user_id,
-    variant_id: body.variant_id,
-    domain,
-    stars,
-  });
+  // 2) BEST EFFORT: write taste_ratings row
+  // ⚠️ din taste_ratings-tabel har mange kolonner – vi logger kun hvis vi har user_key,
+  // og hvis insert fejler stopper vi IKKE læringen.
+  let ratingsLogged = false;
+  let ratingsError: string | null = null;
 
-  if (insErr) return NextResponse.json({ error: insErr.message }, { status: 400 });
+  if (body.user_key && typeof body.user_key === "string" && body.user_key.trim()) {
+    const { error: insErr } = await supabase.from("taste_ratings").insert({
+      user_id,
+      user_key: body.user_key.trim(),
+      variant_id: body.variant_id,
+      domain,
+      stars,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (insErr) {
+      ratingsError = insErr.message;
+    } else {
+      ratingsLogged = true;
+    }
+  } else {
+    ratingsError = "Skipped taste_ratings (missing user_key)";
+  }
 
   // 3) load user profile and update
   const { data: prof, error: profErr } = await supabase
@@ -313,6 +321,12 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     ok: true,
-    debug: { y: updated.y, yHat: updated.yHat, D: updated.D },
+    debug: {
+      y: updated.y,
+      yHat: updated.yHat,
+      D: updated.D,
+      ratingsLogged,
+      ratingsError,
+    },
   });
 }
