@@ -92,8 +92,7 @@ export default function ProfileClient() {
       setErr(null);
 
       try {
-        const user_key = getUserKey();
-        const qs = new URLSearchParams({ domain, user_key });
+        const qs = new URLSearchParams({ domain });
         const res = await fetch(`/api/profile/domain?${qs.toString()}`, { method: "GET" });
         const json = await res.json().catch(() => ({}));
 
