@@ -97,6 +97,7 @@ export default function BrewReviewClient({
           stars: rating,
           product_slug: slug,
           label: name,
+quick: quick,
         }),
       });
 
