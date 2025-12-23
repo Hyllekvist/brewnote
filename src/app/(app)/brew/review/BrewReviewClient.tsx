@@ -53,7 +53,7 @@ type TopPick = {
   label?: string | null;
   score: number;
   dist: number;
-  why?: string[]; // ✅ fra recommend-route
+  why?: string[];
 };
 
 export default function BrewReviewClient({
@@ -100,13 +100,31 @@ export default function BrewReviewClient({
           stars: rating,
           product_slug: slug,
           label: name,
-          quick, // ✅
-          // note gemmer vi senere i /api/brew/review
+          quick,
         }),
       });
 
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || "Kunne ikke gemme rating");
+
+      // 1b) gem review-log (note + quick + metadata)
+      const rr = await fetch("/api/brew/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          variant_id: variantId,
+          domain,
+          stars: rating,
+          quick,
+          note,
+          product_slug: slug,
+          method,
+          seconds,
+        }),
+      });
+
+      const rrJson = await rr.json().catch(() => ({}));
+      if (!rr.ok) throw new Error(rrJson?.error || "Kunne ikke gemme review-log");
 
       setSaveMsg("Review gemt. Vi lærer din smag…");
 
@@ -230,18 +248,10 @@ export default function BrewReviewClient({
               Match: {Math.round((topPick.score ?? 0) * 100)}%
             </div>
 
-            {whyLine ? (
-              <div style={{ fontSize: 12, opacity: 0.75 }}>
-                {whyLine}
-              </div>
-            ) : null}
+            {whyLine ? <div style={{ fontSize: 12, opacity: 0.75 }}>{whyLine}</div> : null}
 
             {topPickHref ? (
-              <a
-                href={topPickHref}
-                className={styles.primary}
-                style={{ textAlign: "center", marginTop: 8 }}
-              >
+              <a href={topPickHref} className={styles.primary} style={{ textAlign: "center", marginTop: 8 }}>
                 Bryg dette
               </a>
             ) : null}
