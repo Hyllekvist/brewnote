@@ -105,7 +105,6 @@ export default function BrewReviewClient({
 
   const [topPick, setTopPick] = useState<TopPick | null>(null);
 
-  // latest state (for small hint)
   const [latest, setLatest] = useState<LatestReview | null>(null);
 
   const backHref = slug ? `/coffees/${encodeURIComponent(slug)}` : "/";
@@ -119,10 +118,7 @@ export default function BrewReviewClient({
     (async () => {
       try {
         const user_key = getUserKey();
-        const qs = new URLSearchParams({
-          user_key,
-          product_slug: slug,
-        });
+        const qs = new URLSearchParams({ user_key, product_slug: slug });
 
         const res = await fetch(`/api/review/latest?${qs.toString()}`, { method: "GET" });
         const json = await res.json().catch(() => ({}));
@@ -134,15 +130,10 @@ export default function BrewReviewClient({
 
         setLatest(r);
 
-        // prefill rating/quick/note if exists
         if (typeof r.stars === "number" && r.stars >= 1 && r.stars <= 5) setRating(r.stars);
-
         if (r.quick === "sour" || r.quick === "balanced" || r.quick === "bitter") setQuick(r.quick);
-
         if (typeof r.note === "string" && r.note.trim()) setNote(r.note.trim());
-      } catch {
-        // ignore
-      }
+      } catch {}
     })();
 
     return () => {
@@ -217,6 +208,24 @@ export default function BrewReviewClient({
 
   const whyLine = topPick?.why?.length ? topPick.why.slice(0, 3).join(" · ") : null;
 
+  // ✅ NEW: rule-based tips from quick
+  const tips = useMemo(() => {
+    if (quick === "bitter") {
+      return domain === "coffee"
+        ? ["Prøv 1–2 klik grovere kværn", "Sænk vandtemperaturen 1–2°C"]
+        : ["Kortere trækketid", "Sænk vandtemperaturen 2–4°C"];
+    }
+    if (quick === "sour") {
+      return domain === "coffee"
+        ? ["Prøv 1–2 klik finere kværn", "Øg tiden lidt (10–20s)"]
+        : ["Højere vandtemperatur 2–4°C", "Længere trækketid"];
+    }
+    if (quick === "balanced") {
+      return ["Hold samme opskrift – finjustér kun én ting ad gangen"];
+    }
+    return [];
+  }, [quick, domain]);
+
   return (
     <main className={styles.page}>
       <header className={styles.topBar}>
@@ -281,6 +290,16 @@ export default function BrewReviewClient({
           </button>
         </div>
 
+        {/* ✅ NEW: Tips (inserted right under quickRow, before textarea) */}
+        {tips.length ? (
+          <div style={{ marginTop: 10, fontSize: 13, opacity: 0.85, display: "grid", gap: 6 }}>
+            <div style={{ fontSize: 12, opacity: 0.7 }}>NÆSTE GANG</div>
+            {tips.slice(0, 2).map((t, i) => (
+              <div key={i}>• {t}</div>
+            ))}
+          </div>
+        ) : null}
+
         <label className={styles.label}>
           Noter (valgfrit)
           <textarea
@@ -291,7 +310,6 @@ export default function BrewReviewClient({
           />
         </label>
 
-        {/* small “last time” hint */}
         {latest?.created_at ? (
           <div style={{ marginTop: 6, fontSize: 12, opacity: 0.7 }}>
             Sidste review: {new Date(latest.created_at).toLocaleDateString("da-DK")}
