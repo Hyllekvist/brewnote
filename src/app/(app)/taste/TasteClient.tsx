@@ -1,5 +1,5 @@
 "use client";
- 
+
 import { useEffect, useMemo, useState } from "react";
 import styles from "./TasteClient.module.css";
 
@@ -10,13 +10,19 @@ type ProfileResp = {
   domain: Domain;
   mu: any | null;
   sigma: any | null;
+  beta?: number | null;
+  updated_at?: string | null;
+
   confidence_count: number;
+
   sensitivity: {
     acidity_sigma: number;
     bitterness_sigma: number;
     most_sensitive: "acidity" | "bitterness" | null;
   };
 };
+
+const MIN_CONF_FOR_PROFILE_LOCK = 3;
 
 function clamp01(x: number) {
   return Math.max(0, Math.min(1, x));
@@ -37,27 +43,35 @@ export default function TasteClient() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  const axes = useMemo(
-    () => [
+  const axes = useMemo(() => {
+    const base = [
       { key: "b", label: "Bitterness" },
       { key: "a", label: "Acidity" },
       { key: "s", label: "Sweetness" },
       { key: "m", label: "Body" },
       { key: "r", label: "Aroma" },
       { key: "c", label: "Clarity" },
-    ],
-    []
-  );
+    ];
+    if (domain === "tea") {
+      return [...base, { key: "t", label: "Astringency" }];
+    }
+    return base;
+  }, [domain]);
 
   useEffect(() => {
     let alive = true;
+
     async function run() {
       setLoading(true);
       setErr(null);
       try {
         const res = await fetch(`/api/profile/domain?domain=${domain}`, { method: "GET" });
         const json = (await res.json().catch(() => ({}))) as ProfileResp;
-        if (!res.ok || !json?.ok) throw new Error((json as any)?.error || `HTTP ${res.status}`);
+
+        if (!res.ok || !json?.ok) {
+          throw new Error((json as any)?.error || `HTTP ${res.status}`);
+        }
+
         if (alive) setData(json);
       } catch (e: any) {
         if (alive) setErr(e?.message || "Kunne ikke hente profil");
@@ -65,28 +79,45 @@ export default function TasteClient() {
         if (alive) setLoading(false);
       }
     }
+
     run();
     return () => {
       alive = false;
     };
   }, [domain]);
 
+  const confN = data?.confidence_count ?? 0;
+  const isColdStart = confN < MIN_CONF_FOR_PROFILE_LOCK;
+
   const confidenceLabel = useMemo(() => {
-    const n = data?.confidence_count ?? 0;
+    const n = confN;
     if (n >= 12) return "High";
     if (n >= 5) return "Medium";
     if (n >= 1) return "Low";
     return "None";
-  }, [data?.confidence_count]);
+  }, [confN]);
+
+  const confidenceHelp = useMemo(() => {
+    if (confN <= 0) return "Giv din første rating for at starte din smagsprofil.";
+    if (confN < MIN_CONF_FOR_PROFILE_LOCK) {
+      const left = MIN_CONF_FOR_PROFILE_LOCK - confN;
+      return `Foreløbig profil – giv ${left} rating${left === 1 ? "" : "s"} mere for at låse din smag fast.`;
+    }
+    return "Profilen er aktiv – vi finjusterer med hver rating.";
+  }, [confN]);
 
   const sensitivityLine = useMemo(() => {
     const s = data?.sensitivity;
     if (!s) return null;
-    if (!s.most_sensitive) return "Vi lærer stadig hvad du er mest følsom overfor.";
+
+    if (isColdStart || !s.most_sensitive) {
+      return "Vi lærer stadig hvad du er mest følsom overfor.";
+    }
+
     return s.most_sensitive === "acidity"
       ? "Du er mest følsom overfor: acidity"
       : "Du er mest følsom overfor: bitterness";
-  }, [data?.sensitivity]);
+  }, [data?.sensitivity, isColdStart]);
 
   return (
     <main className={styles.page}>
@@ -120,19 +151,28 @@ export default function TasteClient() {
             <div className={styles.row}>
               <div className={styles.kicker}>CONFIDENCE</div>
               <div className={styles.pill}>
-                {confidenceLabel} · {data?.confidence_count ?? 0} ratings
+                {confidenceLabel} · {confN} rating{confN === 1 ? "" : "s"}
               </div>
             </div>
 
-            <div className={styles.sub}>{sensitivityLine}</div>
+            <div className={styles.sub}>{confidenceHelp}</div>
+            <div className={styles.sub} style={{ marginTop: 6 }}>
+              {sensitivityLine}
+            </div>
           </section>
 
           <section className={styles.card}>
             <div className={styles.kicker}>PROFILE</div>
 
-            <div className={styles.sliders}>
+            <div
+              className={styles.sliders}
+              style={isColdStart ? { opacity: 0.78 } : undefined}
+            >
               {axes.map((ax) => {
-                const v = readMu(data?.mu, ax.key, 0.5);
+                // fallback lidt mindre “død 50%” – men stadig neutral
+                const fallback = ax.key === "s" ? 0.4 : 0.5;
+                const v = readMu(data?.mu, ax.key, fallback);
+
                 return (
                   <div key={ax.key} className={styles.sliderRow}>
                     <div className={styles.sliderTop}>
@@ -146,6 +186,12 @@ export default function TasteClient() {
                 );
               })}
             </div>
+
+            {isColdStart ? (
+              <div className={styles.sub} style={{ marginTop: 10 }}>
+                Vi viser en foreløbig baseline indtil vi har nok datapunkter.
+              </div>
+            ) : null}
           </section>
         </>
       ) : null}
