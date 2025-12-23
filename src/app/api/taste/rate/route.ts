@@ -11,19 +11,16 @@ type RateBody = {
   product_slug?: string;
   label?: string;
   quick?: Quick;
-
-  // ✅ optional: kun til taste_ratings (anon bridge)
-  user_key?: string; // fra client localStorage (hvis I vil logge taste_ratings)
 };
 
 type TasteVec = {
-  b: number;
-  a: number;
-  s: number;
-  m: number;
-  r: number;
-  c: number;
-  t?: number;
+  b: number; // bitterness
+  a: number; // acidity
+  s: number; // sweetness
+  m: number; // mouthfeel/body
+  r: number; // aroma intensity
+  c: number; // clarity/clean finish
+  t?: number; // astringency (tea only)
 };
 
 type TasteVecDB = Record<string, unknown>;
@@ -33,8 +30,8 @@ const EPS = 1e-6;
 const AXES_CORE = ["b", "a", "s", "m", "r", "c"] as const;
 const AXES_TEA = [...AXES_CORE, "t"] as const;
 
-type AxisCoffee = typeof AXES_CORE[number];
-type AxisTea = typeof AXES_TEA[number];
+type AxisCoffee = (typeof AXES_CORE)[number];
+type AxisTea = (typeof AXES_TEA)[number];
 
 const WEIGHTS: Record<Domain, Record<string, number>> = {
   coffee: { b: 1.0, a: 1.0, s: 0.8, m: 1.0, r: 0.9, c: 0.7 },
@@ -99,7 +96,10 @@ function sanitizeVec(domain: Domain, raw: TasteVecDB | null | undefined, fallbac
     c: clamp01(asNum(v.c, fallback.c)),
   };
 
-  if (domain === "tea") out.t = clamp01(asNum(v.t, fallback.t ?? 0.5));
+  if (domain === "tea") {
+    out.t = clamp01(asNum(v.t, fallback.t ?? 0.5));
+  }
+
   return out;
 }
 
@@ -112,7 +112,7 @@ function computeDistance(domain: Domain, p: TasteVec, mu: TasteVec, sigma: Taste
 
     const pi = clamp01(Number(p[key] ?? 0.5));
     const mui = clamp01(Number(mu[key] ?? 0.5));
-    const si = Math.max(0.08, Number(sigma[key] ?? 0.35));
+    const si = Math.max(0.08, Number(sigma[key] ?? 0.35)); // floor
     const wi = Number(w[String(k)] ?? 1.0);
 
     const diff = pi - mui;
@@ -172,7 +172,9 @@ export async function POST(req: Request) {
   const supabase = await supabaseServer();
 
   const { data: auth, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !auth?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (authErr || !auth?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const user_id = auth.user.id;
 
   let body: RateBody;
@@ -185,8 +187,12 @@ export async function POST(req: Request) {
   const domain = body.domain;
   const stars = Number(body.stars);
 
-  if (domain !== "coffee" && domain !== "tea") return NextResponse.json({ error: "Invalid domain" }, { status: 400 });
-  if (!body.variant_id) return NextResponse.json({ error: "Missing variant_id" }, { status: 400 });
+  if (domain !== "coffee" && domain !== "tea") {
+    return NextResponse.json({ error: "Invalid domain" }, { status: 400 });
+  }
+  if (!body.variant_id) {
+    return NextResponse.json({ error: "Missing variant_id" }, { status: 400 });
+  }
   if (!Number.isFinite(stars) || stars < 1 || stars > 5) {
     return NextResponse.json({ error: "Stars must be 1..5" }, { status: 400 });
   }
@@ -230,38 +236,24 @@ export async function POST(req: Request) {
       },
       { onConflict: "variant_id" }
     );
+
     if (seedErr) return NextResponse.json({ error: seedErr.message }, { status: 400 });
   }
 
-  // 2) BEST EFFORT: write taste_ratings row
-  // ⚠️ din taste_ratings-tabel har mange kolonner – vi logger kun hvis vi har user_key,
-  // og hvis insert fejler stopper vi IKKE læringen.
-  let ratingsLogged = false;
-  let ratingsError: string | null = null;
+  // 2) (valgfrit) log raw ratings i taste_ratings (hvis du vil bruge tabellen senere)
+  // Du sagde tabellen er tom – vi lader den være OFF by default:
+  // const { error: insErr } = await supabase.from("taste_ratings").insert({
+  //   user_id,
+  //   variant_id: body.variant_id,
+  //   domain,
+  //   stars,
+  // });
+  // if (insErr) return NextResponse.json({ error: insErr.message }, { status: 400 });
 
-  if (body.user_key && typeof body.user_key === "string" && body.user_key.trim()) {
-    const { error: insErr } = await supabase.from("taste_ratings").insert({
-      user_id,
-      user_key: body.user_key.trim(),
-      variant_id: body.variant_id,
-      domain,
-      stars,
-      updated_at: new Date().toISOString(),
-    });
-
-    if (insErr) {
-      ratingsError = insErr.message;
-    } else {
-      ratingsLogged = true;
-    }
-  } else {
-    ratingsError = "Skipped taste_ratings (missing user_key)";
-  }
-
-  // 3) load user profile and update
+  // 3) load user profile and update (nu også ratings_count)
   const { data: prof, error: profErr } = await supabase
     .from("user_domain_profiles")
-    .select("mu, sigma, beta")
+    .select("mu, sigma, beta, ratings_count")
     .eq("user_id", user_id)
     .eq("domain", domain)
     .maybeSingle();
@@ -305,6 +297,9 @@ export async function POST(req: Request) {
     }
   }
 
+  // ✅ ratings_count++ (source of truth)
+  const nextCount = Number(prof?.ratings_count ?? 0) + 1;
+
   const { error: upErr } = await supabase.from("user_domain_profiles").upsert(
     {
       user_id,
@@ -312,6 +307,7 @@ export async function POST(req: Request) {
       mu: updated.mu,
       sigma: updated.sigma,
       beta: updated.beta,
+      ratings_count: nextCount,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id,domain" }
@@ -321,12 +317,6 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     ok: true,
-    debug: {
-      y: updated.y,
-      yHat: updated.yHat,
-      D: updated.D,
-      ratingsLogged,
-      ratingsError,
-    },
+    debug: { y: updated.y, yHat: updated.yHat, D: updated.D },
   });
 }
