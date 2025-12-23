@@ -13,11 +13,9 @@ type Props = {
   onDone?: () => void;
   onBrewAgain?: () => void;
 
-  // smagsmodel inputs
   variantId?: string; // uuid
   domain?: Domain;
 
-  // metadata til variant_taste_vectors
   productSlug?: string;
   label?: string;
 };
@@ -91,8 +89,6 @@ export function FinishStage({
   const [stars, setStars] = useState(0);
   const [isSavingRating, setIsSavingRating] = useState(false);
   const [ratingSaved, setRatingSaved] = useState(false);
-
-  // det vi viser til user
   const [ratingMsg, setRatingMsg] = useState<string | null>(null);
 
   const canRate = useMemo(() => {
@@ -117,7 +113,6 @@ export function FinishStage({
           stars,
           product_slug: productSlug,
           label,
-          // note: user_key kan komme senere hvis I vil udfylde taste_ratings 100%
         }),
       });
 
@@ -126,23 +121,28 @@ export function FinishStage({
 
       setRatingSaved(true);
 
-      // opdater UI baseret på confidence
+      // ✅ Gate: vi siger IKKE “typisk smag” før nok datapunkter
       const conf = await fetchConfidence(domain);
-
       if (conf !== null && conf < MIN_CONF_FOR_TASTE_MSG) {
-        setRatingMsg(`Tak! Giv ${Math.max(0, MIN_CONF_FOR_TASTE_MSG - conf)} ratings mere, så kan vi sige noget sikkert om din smag.`);
+        const left = Math.max(0, MIN_CONF_FOR_TASTE_MSG - conf);
+        setRatingMsg(
+          left > 0
+            ? `Tak! Giv ${left} rating${left === 1 ? "" : "s"} mere, så kan vi lære din smag.`
+            : "Tak! Vi lærer din smag…"
+        );
       } else {
         const yHat = Number(json?.debug?.yHat);
         setRatingMsg(Number.isFinite(yHat) ? tasteMessage(yHat) : "Tak! Rating gemt.");
       }
 
-      // events: så Profil/Taste kan refreshe
+      // events
       try {
         window.dispatchEvent(new Event("brewnote_profile_changed"));
         window.dispatchEvent(new Event("brewnote_bar_changed"));
       } catch {}
     } catch (e: any) {
       setRatingMsg(e?.message || "Noget gik galt");
+      setRatingSaved(false);
     } finally {
       setIsSavingRating(false);
     }
@@ -161,15 +161,13 @@ export function FinishStage({
         <p className={styles.sub}>{subtitle}</p>
 
         <div style={{ marginTop: 16, display: "grid", gap: 10 }}>
-          <div style={{ fontWeight: 700, fontSize: 14, opacity: 0.95 }}>
-            Hvordan smagte det?
-          </div>
+          <div style={{ fontWeight: 700, fontSize: 14, opacity: 0.95 }}>Hvordan smagte det?</div>
 
           <StarRow value={stars} onChange={setStars} disabled={isSavingRating || ratingSaved} />
 
           {!canRate ? (
             <div style={{ fontSize: 12, opacity: 0.75 }}>
-              Rating er klar, men mangler <code>variantId</code> + <code>domain</code> fra brew-flowet.
+              Rating er klar, men mangler <code>variantId</code> + <code>domain</code>.
             </div>
           ) : (
             <button
