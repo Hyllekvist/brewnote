@@ -1,12 +1,50 @@
-"use client"; 
+"use client";
 
 import { useMemo, useState } from "react";
 import styles from "./BrewReviewClient.module.css";
+
+type Domain = "coffee" | "tea";
 
 function formatMMSS(total: number) {
   const m = Math.floor(total / 60);
   const s = total % 60;
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+// samme pseudo-variant-id logik som i BrewClient
+function fnv1a32(str: string, seed = 0x811c9dc5) {
+  let h = seed >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+function stableUuidFromString(input: string) {
+  const h1 = fnv1a32(input, 0x811c9dc5);
+  const h2 = fnv1a32(input, 0x811c9dc5 ^ 0x9e3779b9);
+  const h3 = fnv1a32(input, 0x811c9dc5 ^ 0x7f4a7c15);
+  const h4 = fnv1a32(input, 0x811c9dc5 ^ 0x94d049bb);
+
+  const b = new Uint8Array(16);
+  const parts = [h1, h2, h3, h4];
+  for (let p = 0; p < 4; p++) {
+    const x = parts[p];
+    b[p * 4 + 0] = (x >>> 24) & 0xff;
+    b[p * 4 + 1] = (x >>> 16) & 0xff;
+    b[p * 4 + 2] = (x >>> 8) & 0xff;
+    b[p * 4 + 3] = x & 0xff;
+  }
+
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+
+  const hex = [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function prettyNameFromSlug(slug: string) {
+  return slug ? decodeURIComponent(slug).replace(/-/g, " ") : "Brew";
 }
 
 export default function BrewReviewClient({
@@ -20,25 +58,96 @@ export default function BrewReviewClient({
   seconds: number;
   method: string;
 }) {
-  const name = useMemo(() => {
-    return slug ? decodeURIComponent(slug).replace(/-/g, " ") : "Brew";
-  }, [slug]);
+  const domain: Domain = type === "tea" ? "tea" : "coffee";
+
+  const name = useMemo(() => prettyNameFromSlug(slug), [slug]);
+  const variantId = useMemo(() => stableUuidFromString(`${domain}:${slug}`), [domain, slug]);
 
   const [rating, setRating] = useState<number>(0);
   const [quick, setQuick] = useState<"sour" | "balanced" | "bitter" | null>(null);
   const [note, setNote] = useState("");
 
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
+
+  const [topPick, setTopPick] = useState<null | {
+    variant_id: string;
+    product_slug?: string | null;
+    label?: string | null;
+    score: number;
+    dist: number;
+  }>(null);
+
   const backHref = slug ? `/coffees/${encodeURIComponent(slug)}` : "/";
+
+  async function saveReview() {
+    if (rating === 0 || isSaving) return;
+    setIsSaving(true);
+    setSaveMsg(null);
+    setTopPick(null);
+
+    try {
+      // 1) lær profilen (taste/rate)
+      const res = await fetch("/api/taste/rate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          variant_id: variantId,
+          domain,
+          stars: rating,
+          product_slug: slug,
+          label: name,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || "Kunne ikke gemme rating");
+
+      setSaveMsg("Review gemt. Vi lærer din smag…");
+
+      // 2) hent top pick
+      const rec = await fetch(`/api/taste/recommend?domain=${domain}&limit=1`, {
+        method: "GET",
+      });
+      const recJson = await rec.json().catch(() => ({}));
+
+      if (rec.ok && recJson?.ok && Array.isArray(recJson.items) && recJson.items[0]) {
+        setTopPick(recJson.items[0]);
+        setSaveMsg("Gemte. Her er dit bedste match lige nu:");
+      } else {
+        // Hvis ingen profil endnu / ingen candidates
+        setSaveMsg("Gemte. Giv 1-2 reviews mere for at få anbefalinger.");
+      }
+
+      // NOTE: quick + note gemmer vi ikke endnu — men vi kan senere lave /api/brew/review der skriver til Supabase
+      // quick kan bruges til at finjustere: sour/bitter => justér acidity/bitterness i p eller mu (senere)
+    } catch (e: any) {
+      setSaveMsg(e?.message || "Noget gik galt");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  const topPickHref =
+    topPick?.product_slug
+      ? `/brew/${domain}/${encodeURIComponent(topPick.product_slug)}`
+      : null;
 
   return (
     <main className={styles.page}>
       <header className={styles.topBar}>
-        <a className={styles.iconBtn} href={backHref} aria-label="Tilbage">←</a>
+        <a className={styles.iconBtn} href={backHref} aria-label="Tilbage">
+          ←
+        </a>
         <div className={styles.topTitle}>
           <div className={styles.kicker}>REVIEW</div>
-          <div className={styles.h1}>{type === "tea" ? "Tea Brew" : "Coffee Brew"} — {name}</div>
+          <div className={styles.h1}>
+            {domain === "tea" ? "Tea Brew" : "Coffee Brew"} — {name}
+          </div>
         </div>
-        <a className={styles.iconBtn} href={backHref} aria-label="Luk">✕</a>
+        <a className={styles.iconBtn} href={backHref} aria-label="Luk">
+          ✕
+        </a>
       </header>
 
       <section className={styles.card}>
@@ -98,18 +207,51 @@ export default function BrewReviewClient({
           />
         </label>
 
+        {/* ✅ Feedback + recommendation */}
+        {saveMsg ? <div style={{ marginTop: 10, fontSize: 13, opacity: 0.9 }}>{saveMsg}</div> : null}
+
+        {topPick ? (
+          <div
+            style={{
+              marginTop: 12,
+              padding: 12,
+              borderRadius: 14,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "rgba(255,255,255,0.04)",
+              display: "grid",
+              gap: 6,
+            }}
+          >
+            <div style={{ fontSize: 12, opacity: 0.75 }}>TOP PICK FOR YOU</div>
+            <div style={{ fontWeight: 800 }}>
+              {topPick.label || prettyNameFromSlug(String(topPick.product_slug || "")) || "Recommended"}
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.8 }}>
+              Match: {Math.round((topPick.score ?? 0) * 100)}%
+            </div>
+            {topPickHref ? (
+              <a
+                href={topPickHref}
+                className={styles.primary}
+                style={{ textAlign: "center", marginTop: 8 }}
+              >
+                Bryg dette
+              </a>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className={styles.actions}>
-          <a className={styles.secondary} href={backHref}>Spring over</a>
+          <a className={styles.secondary} href={backHref}>
+            Spring over
+          </a>
           <button
             className={styles.primary}
             type="button"
-            onClick={() => {
-              // v1: ingen DB endnu. Næste step: skriv til Supabase.
-              alert("Saved (v1). Next: persist to Supabase.");
-            }}
-            disabled={rating === 0}
+            onClick={saveReview}
+            disabled={rating === 0 || isSaving}
           >
-            Gem review
+            {isSaving ? "Gemmer..." : "Gem review"}
           </button>
         </div>
       </section>
