@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 
-type Domain = "coffee" | "tea";
+type Domain = "coffee" | "tea"; 
 
 type RateBody = {
   variant_id: string;
