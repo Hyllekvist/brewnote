@@ -1,0 +1,40 @@
+.page { min-height: 100vh; padding: 18px 14px 80px; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.title { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+
+.switch { display: flex; gap: 8px; }
+.switchOn, .switchOff {
+  padding: 8px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.14);
+  font-size: 13px;
+}
+.switchOn { background: rgba(255,255,255,0.10); font-weight: 800; }
+.switchOff { background: rgba(255,255,255,0.04); opacity: 0.85; }
+
+.card {
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.kicker { font-size: 11px; opacity: 0.7; letter-spacing: 0.12em; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pill {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+}
+
+.sub { margin-top: 8px; font-size: 13px; opacity: 0.9; }
+
+.sliders { margin-top: 12px; display: grid; gap: 12px; }
+.sliderRow { display: grid; gap: 8px; }
+.sliderTop { display: flex; justify-content: space-between; gap: 12px; }
+.sliderLabel { font-size: 13px; opacity: 0.92; }
+.sliderVal { font-size: 13px; opacity: 0.75; }
+
+.track { height: 10px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.fill { height: 100%; background: rgba(255,255,255,0.45); border-radius: 999px; }
