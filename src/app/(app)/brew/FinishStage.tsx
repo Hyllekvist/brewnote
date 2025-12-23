@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useMemo, useState } from "react";
 import styles from "./FinishStage.module.css";
 
@@ -14,11 +13,14 @@ type Props = {
   onSave?: () => void;
   onDone?: () => void;
   onBrewAgain?: () => void;
-productSlug?: string;
-label?: string;
-  // ✅ NYT: kræves for at lære noget meningsfuldt
-  variantId?: string;      // uuid
-  domain?: Domain;         // "coffee" | "tea"
+
+  // smagsmodel inputs
+  variantId?: string; // uuid
+  domain?: Domain;
+
+  // ✅ metadata til variant_taste_vectors
+  productSlug?: string;
+  label?: string;
 };
 
 function tasteMessage(yHat: number) {
@@ -68,9 +70,10 @@ export function FinishStage({
   onSave,
   onDone,
   onBrewAgain,
-
   variantId,
   domain,
+  productSlug,
+  label,
 }: Props) {
   const [stars, setStars] = useState(0);
   const [isSavingRating, setIsSavingRating] = useState(false);
@@ -93,12 +96,12 @@ export function FinishStage({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-  variant_id: variantId,
-  domain,
-  stars,
-  product_slug: productSlug,
-  label,
-}),
+          variant_id: variantId,
+          domain,
+          stars,
+          product_slug: productSlug,
+          label: label,
+        }),
       });
 
       const json = await res.json().catch(() => ({}));
@@ -106,9 +109,6 @@ export function FinishStage({
 
       const yHat = Number(json?.debug?.yHat);
       setRatingMsg(Number.isFinite(yHat) ? tasteMessage(yHat) : "Tak! Rating gemt.");
-
-      // optional: hvis du vil trigge noget efter rating
-      // onSave?.();
     } catch (e: any) {
       setRatingMsg(e?.message || "Noget gik galt");
     } finally {
@@ -117,7 +117,6 @@ export function FinishStage({
   }
 
   function primaryAction() {
-    // din eksisterende flow-logik
     if (onSave) return onSave();
     if (onDone) return onDone();
   }
@@ -129,7 +128,6 @@ export function FinishStage({
         <h1 className={styles.h1}>{title}</h1>
         <p className={styles.sub}>{subtitle}</p>
 
-        {/* ✅ Rating block */}
         <div style={{ marginTop: 16, display: "grid", gap: 10 }}>
           <div style={{ fontWeight: 700, fontSize: 14, opacity: 0.95 }}>
             Hvordan smagte det?
