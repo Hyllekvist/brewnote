@@ -262,12 +262,14 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
 
   if (stage === "finish") {
     return (
-      <FinishStage
-        title="Brew complete"
-        onSave={saveBrew}
-        domain={domain}
-        variantId={variantId}
-      />
+<FinishStage
+  title="Brew complete"
+  onSave={saveBrew}
+  domain={domain}
+  variantId={variantId}
+  productSlug={slug}
+  label={decodeURIComponent(slug).replace(/-/g, " ")}
+/>
     );
   }
 
