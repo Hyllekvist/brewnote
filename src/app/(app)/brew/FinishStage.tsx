@@ -16,6 +16,7 @@ type Props = {
   variantId?: string; // uuid
   domain?: Domain;
 
+  // metadata til variant_taste_vectors
   productSlug?: string;
   label?: string;
 };
@@ -121,7 +122,7 @@ export function FinishStage({
 
       setRatingSaved(true);
 
-      // ✅ Gate: vi siger IKKE “typisk smag” før nok datapunkter
+      // ✅ Gate smagsbeskeder indtil vi har nok datapunkter
       const conf = await fetchConfidence(domain);
       if (conf !== null && conf < MIN_CONF_FOR_TASTE_MSG) {
         const left = Math.max(0, MIN_CONF_FOR_TASTE_MSG - conf);
@@ -135,8 +136,9 @@ export function FinishStage({
         setRatingMsg(Number.isFinite(yHat) ? tasteMessage(yHat) : "Tak! Rating gemt.");
       }
 
-      // events
+      // ✅ Events: bruges til at refetch på Taste/Profile/Bar
       try {
+        window.dispatchEvent(new Event("brewnote_rating_logged"));
         window.dispatchEvent(new Event("brewnote_profile_changed"));
         window.dispatchEvent(new Event("brewnote_bar_changed"));
       } catch {}
