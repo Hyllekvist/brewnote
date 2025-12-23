@@ -6,7 +6,9 @@ type Domain = "coffee" | "tea";
 type RateBody = {
   variant_id: string;
   domain: Domain;
-  stars: number; // 1..5
+  stars: number;
+  product_slug?: string;
+  label?: string;
 };
 
 type TasteVec = {
@@ -213,16 +215,18 @@ export async function POST(req: Request) {
     p = sanitizeVec(domain, vt.p as TasteVecDB, defaultP(domain));
   } else {
     // seed if missing
-    const { error: seedErr } = await supabase.from("variant_taste_vectors").upsert(
-      {
-        variant_id: body.variant_id,
-        domain,
-        p,
-        confidence: 0.2,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "variant_id" }
-    );
+await supabase.from("variant_taste_vectors").upsert(
+  {
+    variant_id: body.variant_id,
+    domain,
+    p,
+    confidence: 0.2,
+    product_slug: body.product_slug ?? null,
+    label: body.label ?? null,
+    updated_at: new Date().toISOString(),
+  },
+  { onConflict: "variant_id" }
+);
 
     if (seedErr) {
       return NextResponse.json({ error: seedErr.message }, { status: 400 });
