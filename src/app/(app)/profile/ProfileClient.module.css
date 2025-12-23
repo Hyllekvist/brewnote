@@ -1,0 +1,159 @@
+.page {
+  min-height: 100vh;
+  padding: 18px 14px 96px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.kicker {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  opacity: 0.75;
+}
+
+.h1 {
+  margin: 6px 0 2px;
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.sub {
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.segment {
+  display: inline-flex;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.04);
+}
+
+.segOn, .segOff {
+  padding: 8px 12px;
+  font-size: 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.segOn {
+  background: rgba(255,255,255,0.14);
+}
+
+.card {
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  border-radius: 18px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rowLeft {
+  min-width: 0;
+}
+
+.rowTitle {
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.rowSub {
+  margin-top: 2px;
+  font-size: 12px;
+  opacity: 0.72;
+}
+
+.pill {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  white-space: nowrap;
+}
+
+.barWrap {
+  margin-top: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.03);
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  background: rgba(255,255,255,0.22);
+  border-radius: 999px;
+}
+
+.hr {
+  height: 1px;
+  margin: 12px 0;
+  background: rgba(255,255,255,0.10);
+}
+
+.sectionTitle {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  opacity: 0.75;
+  margin-bottom: 10px;
+}
+
+.sliders {
+  display: grid;
+  gap: 12px;
+}
+
+.sliderRow {
+  display: grid;
+  gap: 6px;
+}
+
+.sliderTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.axis {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.val {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.range {
+  width: 100%;
+}
+
+.muted {
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.error {
+  font-size: 13px;
+  color: #ffb4b4;
+}
