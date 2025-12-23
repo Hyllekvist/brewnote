@@ -6,6 +6,10 @@ import { PrepStage } from "./PrepStage";
 import { BrewStage, type BrewStep, type BrewPhase } from "./BrewStage";
 import { FinishStage } from "./FinishStage";
 
+type Domain = "coffee" | "tea";
+
+/* ---------- helpers ---------- */
+
 function toTitle(type: string, slug: string) {
   const name = slug ? decodeURIComponent(slug).replace(/-/g, " ") : "Brew Mode";
   return type === "tea" ? `Tea Brew — ${name}` : `Coffee Brew — ${name}`;
@@ -32,8 +36,51 @@ function getUserKey() {
   return newKey;
 }
 
+// Deterministisk UUID fra string (pseudo-variant-id pr slug+type)
+// (Ikke kryptografisk, men stabil og RFC4122-ish)
+function fnv1a32(str: string, seed = 0x811c9dc5) {
+  let h = seed >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+
+function stableUuidFromString(input: string) {
+  const h1 = fnv1a32(input, 0x811c9dc5);
+  const h2 = fnv1a32(input, 0x811c9dc5 ^ 0x9e3779b9);
+  const h3 = fnv1a32(input, 0x811c9dc5 ^ 0x7f4a7c15);
+  const h4 = fnv1a32(input, 0x811c9dc5 ^ 0x94d049bb);
+
+  // 16 bytes
+  const b = new Uint8Array(16);
+  const parts = [h1, h2, h3, h4];
+  for (let p = 0; p < 4; p++) {
+    const x = parts[p];
+    b[p * 4 + 0] = (x >>> 24) & 0xff;
+    b[p * 4 + 1] = (x >>> 16) & 0xff;
+    b[p * 4 + 2] = (x >>> 8) & 0xff;
+    b[p * 4 + 3] = x & 0xff;
+  }
+
+  // set version = 4 (0100)
+  b[6] = (b[6] & 0x0f) | 0x40;
+  // set variant = RFC4122 (10xx)
+  b[8] = (b[8] & 0x3f) | 0x80;
+
+  const hex = [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+/* ---------- component ---------- */
+
 export default function BrewClient({ type, slug }: { type: string; slug: string }) {
+  const domain: Domain = type === "tea" ? "tea" : "coffee";
   const title = useMemo(() => toTitle(type, slug), [type, slug]);
+
+  // pseudo-variant-id pr produkt (indtil I har rigtige variant_id’er)
+  const variantId = useMemo(() => stableUuidFromString(`${domain}:${slug}`), [domain, slug]);
 
   const steps: BrewStep[] = useMemo(
     () => [
@@ -78,11 +125,9 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
   );
 
   const [stage, setStage] = useState<"prep" | "brew" | "finish">("prep");
-
   const [activeIndex, setActiveIndex] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
-
   const [isSaving, setIsSaving] = useState(false);
 
   const onTick = useCallback(() => {
@@ -161,6 +206,7 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
       const payload = {
         user_key,
         product_slug: slug,
+        product_type: domain, // ✅ FIX: din save-route kræver den
         method: methodName,
         ratio_label: ratioLabel,
         dose_g: doseG,
@@ -198,7 +244,7 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
     } finally {
       setIsSaving(false);
     }
-  }, [isSaving, slug, type, elapsedSeconds, totalPlannedSeconds]);
+  }, [isSaving, slug, domain, elapsedSeconds, totalPlannedSeconds]);
 
   const prepSummary = useMemo(() => {
     return {
@@ -215,7 +261,14 @@ export default function BrewClient({ type, slug }: { type: string; slug: string 
   }
 
   if (stage === "finish") {
-    return <FinishStage title="Brew complete" onSave={saveBrew} />;
+    return (
+      <FinishStage
+        title="Brew complete"
+        onSave={saveBrew}
+        domain={domain}
+        variantId={variantId}
+      />
+    );
   }
 
   return (
