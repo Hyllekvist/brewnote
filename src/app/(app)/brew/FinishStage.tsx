@@ -9,7 +9,6 @@ type Props = {
   title?: string;
   subtitle?: string;
 
-  // eksisterende callbacks
   onSave?: () => void;
   onDone?: () => void;
   onBrewAgain?: () => void;
@@ -18,10 +17,12 @@ type Props = {
   variantId?: string; // uuid
   domain?: Domain;
 
-  // ✅ metadata til variant_taste_vectors
+  // metadata til variant_taste_vectors
   productSlug?: string;
   label?: string;
 };
+
+const MIN_CONF_FOR_TASTE_MSG = 3;
 
 function tasteMessage(yHat: number) {
   if (yHat >= 0.7) return "Meget tæt på din smag.";
@@ -64,6 +65,18 @@ function StarRow({
   );
 }
 
+async function fetchConfidence(domain: Domain): Promise<number | null> {
+  try {
+    const res = await fetch(`/api/profile/domain?domain=${domain}`, { method: "GET" });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json?.ok) return null;
+    const n = Number(json?.confidence_count);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
 export function FinishStage({
   title = "Brew complete",
   subtitle = "Done. Smag først. Justér bagefter.",
@@ -77,13 +90,16 @@ export function FinishStage({
 }: Props) {
   const [stars, setStars] = useState(0);
   const [isSavingRating, setIsSavingRating] = useState(false);
+  const [ratingSaved, setRatingSaved] = useState(false);
+
+  // det vi viser til user
   const [ratingMsg, setRatingMsg] = useState<string | null>(null);
 
   const canRate = useMemo(() => {
     return !!variantId && (domain === "coffee" || domain === "tea");
   }, [variantId, domain]);
 
-  const canSubmitRating = canRate && stars >= 1 && !isSavingRating;
+  const canSubmitRating = canRate && stars >= 1 && !isSavingRating && !ratingSaved;
 
   async function saveRating() {
     if (!canSubmitRating || !variantId || !domain) return;
@@ -100,15 +116,31 @@ export function FinishStage({
           domain,
           stars,
           product_slug: productSlug,
-          label: label,
+          label,
+          // note: user_key kan komme senere hvis I vil udfylde taste_ratings 100%
         }),
       });
 
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || "Kunne ikke gemme rating");
 
-      const yHat = Number(json?.debug?.yHat);
-      setRatingMsg(Number.isFinite(yHat) ? tasteMessage(yHat) : "Tak! Rating gemt.");
+      setRatingSaved(true);
+
+      // opdater UI baseret på confidence
+      const conf = await fetchConfidence(domain);
+
+      if (conf !== null && conf < MIN_CONF_FOR_TASTE_MSG) {
+        setRatingMsg(`Tak! Giv ${Math.max(0, MIN_CONF_FOR_TASTE_MSG - conf)} ratings mere, så kan vi sige noget sikkert om din smag.`);
+      } else {
+        const yHat = Number(json?.debug?.yHat);
+        setRatingMsg(Number.isFinite(yHat) ? tasteMessage(yHat) : "Tak! Rating gemt.");
+      }
+
+      // events: så Profil/Taste kan refreshe
+      try {
+        window.dispatchEvent(new Event("brewnote_profile_changed"));
+        window.dispatchEvent(new Event("brewnote_bar_changed"));
+      } catch {}
     } catch (e: any) {
       setRatingMsg(e?.message || "Noget gik galt");
     } finally {
@@ -133,7 +165,7 @@ export function FinishStage({
             Hvordan smagte det?
           </div>
 
-          <StarRow value={stars} onChange={setStars} disabled={isSavingRating} />
+          <StarRow value={stars} onChange={setStars} disabled={isSavingRating || ratingSaved} />
 
           {!canRate ? (
             <div style={{ fontSize: 12, opacity: 0.75 }}>
@@ -147,7 +179,7 @@ export function FinishStage({
               className={styles.secondary}
               style={{ justifySelf: "start" }}
             >
-              {isSavingRating ? "Gemmer..." : "Gem rating"}
+              {ratingSaved ? "Gemt ✅" : isSavingRating ? "Gemmer..." : "Gem rating"}
             </button>
           )}
 
