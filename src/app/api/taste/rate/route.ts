@@ -30,6 +30,9 @@ const EPS = 1e-6;
 const AXES_CORE = ["b", "a", "s", "m", "r", "c"] as const;
 const AXES_TEA = [...AXES_CORE, "t"] as const;
 
+type AxisCoffee = typeof AXES_CORE[number];
+type AxisTea = typeof AXES_TEA[number];
+
 const WEIGHTS: Record<Domain, Record<string, number>> = {
   coffee: { b: 1.0, a: 1.0, s: 0.8, m: 1.0, r: 0.9, c: 0.7 },
   tea: { b: 0.9, a: 0.6, s: 0.6, m: 0.5, r: 1.1, c: 1.2, t: 1.1 },
@@ -168,14 +171,12 @@ function bump01(x: number, d: number) {
 export async function POST(req: Request) {
   const supabase = await supabaseServer();
 
-  // auth user
   const { data: auth, error: authErr } = await supabase.auth.getUser();
   if (authErr || !auth?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const user_id = auth.user.id;
 
-  // body
   let body: RateBody;
   try {
     body = (await req.json()) as RateBody;
@@ -205,14 +206,11 @@ export async function POST(req: Request) {
     .eq("variant_id", body.variant_id)
     .maybeSingle();
 
-  if (vtErr) {
-    return NextResponse.json({ error: vtErr.message }, { status: 400 });
-  }
+  if (vtErr) return NextResponse.json({ error: vtErr.message }, { status: 400 });
 
   if (vt?.p && (vt.domain === domain || !vt.domain)) {
     p = sanitizeVec(domain, vt.p as TasteVecDB, defaultP(domain));
 
-    // optional: update metadata if provided and missing
     if ((body.product_slug || body.label) && (!vt.product_slug || !vt.label)) {
       const { error: metaErr } = await supabase
         .from("variant_taste_vectors")
@@ -223,12 +221,9 @@ export async function POST(req: Request) {
         })
         .eq("variant_id", body.variant_id);
 
-      if (metaErr) {
-        return NextResponse.json({ error: metaErr.message }, { status: 400 });
-      }
+      if (metaErr) return NextResponse.json({ error: metaErr.message }, { status: 400 });
     }
   } else {
-    // seed if missing
     const { error: seedErr } = await supabase.from("variant_taste_vectors").upsert(
       {
         variant_id: body.variant_id,
@@ -242,9 +237,7 @@ export async function POST(req: Request) {
       { onConflict: "variant_id" }
     );
 
-    if (seedErr) {
-      return NextResponse.json({ error: seedErr.message }, { status: 400 });
-    }
+    if (seedErr) return NextResponse.json({ error: seedErr.message }, { status: 400 });
   }
 
   // 2) write rating row
@@ -255,9 +248,7 @@ export async function POST(req: Request) {
     stars,
   });
 
-  if (insErr) {
-    return NextResponse.json({ error: insErr.message }, { status: 400 });
-  }
+  if (insErr) return NextResponse.json({ error: insErr.message }, { status: 400 });
 
   // 3) load user profile and update
   const { data: prof, error: profErr } = await supabase
@@ -267,9 +258,7 @@ export async function POST(req: Request) {
     .eq("domain", domain)
     .maybeSingle();
 
-  if (profErr) {
-    return NextResponse.json({ error: profErr.message }, { status: 400 });
-  }
+  if (profErr) return NextResponse.json({ error: profErr.message }, { status: 400 });
 
   const mu: TasteVec = prof?.mu
     ? sanitizeVec(domain, prof.mu as TasteVecDB, initMu(domain))
@@ -283,28 +272,28 @@ export async function POST(req: Request) {
 
   const updated = updateProfile({ domain, stars, p, mu, sigma, beta });
 
-  // 4) apply quick feedback nudges (small + controlled)
+  // 4) quick nudges
   const quick: Quick = (body.quick ?? null) as Quick;
 
   if (quick === "sour") {
-    // "for sur" -> prefer lower acidity
     updated.mu.a = bump01(updated.mu.a ?? 0.5, -0.03);
     updated.sigma.a = Math.max(0.10, (updated.sigma.a ?? 0.35) * 0.97);
   } else if (quick === "bitter") {
-    // "for bitter" -> prefer lower bitterness
     updated.mu.b = bump01(updated.mu.b ?? 0.5, -0.03);
     updated.sigma.b = Math.max(0.10, (updated.sigma.b ?? 0.35) * 0.97);
   } else if (quick === "balanced") {
-    // "perfekt" -> increase confidence slightly across axes
-    const keys = domain === "tea"
-      ? (["b", "a", "s", "m", "r", "c", "t"] as const)
-      : (["b", "a", "s", "m", "r", "c"] as const);
-
-    for (const k of keys) {
-      const key = k as keyof TasteVec;
-      // sigma exists on same keys as TasteVec
-      // @ts-expect-error (fine: TasteVec aligns)
-      updated.sigma[key] = Math.max(0.10, (updated.sigma[key] ?? 0.35) * 0.98);
+    if (domain === "tea") {
+      const keys: AxisTea[] = ["b", "a", "s", "m", "r", "c", "t"];
+      for (const k of keys) {
+        const cur = Number(updated.sigma[k] ?? 0.35);
+        updated.sigma[k] = Math.max(0.10, cur * 0.98);
+      }
+    } else {
+      const keys: AxisCoffee[] = ["b", "a", "s", "m", "r", "c"];
+      for (const k of keys) {
+        const cur = Number(updated.sigma[k] ?? 0.35);
+        updated.sigma[k] = Math.max(0.10, cur * 0.98);
+      }
     }
   }
 
@@ -320,9 +309,7 @@ export async function POST(req: Request) {
     { onConflict: "user_id,domain" }
   );
 
-  if (upErr) {
-    return NextResponse.json({ error: upErr.message }, { status: 400 });
-  }
+  if (upErr) return NextResponse.json({ error: upErr.message }, { status: 400 });
 
   return NextResponse.json({
     ok: true,
