@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
  
-type Domain = "coffee" | "tea";
+type Domain = "coffee" | "tea"; 
 
 const WEIGHTS: Record<Domain, Record<string, number>> = {
   coffee: { b: 1.0, a: 1.0, s: 0.8, m: 1.0, r: 0.9, c: 0.7 },
