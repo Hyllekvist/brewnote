@@ -13,7 +13,8 @@ type Props = {
   onSave?: () => void;
   onDone?: () => void;
   onBrewAgain?: () => void;
-
+productSlug?: string;
+label?: string;
   // ✅ NYT: kræves for at lære noget meningsfuldt
   variantId?: string;      // uuid
   domain?: Domain;         // "coffee" | "tea"
@@ -91,10 +92,12 @@ export function FinishStage({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          variant_id: variantId,
-          domain,
-          stars,
-        }),
+  variant_id: variantId,
+  domain,
+  stars,
+  product_slug: productSlug,
+  label,
+}),
       });
 
       const json = await res.json().catch(() => ({}));
