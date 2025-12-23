@@ -6,7 +6,7 @@ type Domain = "coffee" | "tea";
 type RateBody = {
   variant_id: string;
   domain: Domain;
-  stars: number;
+  stars: number; // 1..5
   product_slug?: string;
   label?: string;
 };
@@ -38,7 +38,6 @@ function clamp01(x: number) {
 }
 
 function sigmoid(z: number) {
-  // numerically stable-ish sigmoid
   if (z >= 0) {
     const ez = Math.exp(-z);
     return 1 / (1 + ez);
@@ -49,8 +48,7 @@ function sigmoid(z: number) {
 }
 
 function starsToY(stars: number) {
-  // 1..5 -> 0..1
-  return (stars - 1) / 4;
+  return (stars - 1) / 4; // 1..5 -> 0..1
 }
 
 function axesFor(domain: Domain) {
@@ -70,7 +68,6 @@ function initMu(domain: Domain): TasteVec {
 }
 
 function initSigma(domain: Domain): TasteVec {
-  // higher = more uncertain = learn faster
   const base: TasteVec = { b: 0.35, a: 0.35, s: 0.35, m: 0.35, r: 0.35, c: 0.35 };
   if (domain === "tea") base.t = 0.35;
   return base;
@@ -97,6 +94,7 @@ function sanitizeVec(domain: Domain, raw: TasteVecDB | null | undefined, fallbac
   if (domain === "tea") {
     out.t = clamp01(asNum(v.t, fallback.t ?? 0.5));
   }
+
   return out;
 }
 
@@ -109,9 +107,7 @@ function computeDistance(domain: Domain, p: TasteVec, mu: TasteVec, sigma: Taste
 
     const pi = clamp01(Number(p[key] ?? 0.5));
     const mui = clamp01(Number(mu[key] ?? 0.5));
-
-    // sigma floor (avoid exploding gradients)
-    const si = Math.max(0.08, Number(sigma[key] ?? 0.35));
+    const si = Math.max(0.08, Number(sigma[key] ?? 0.35)); // floor
     const wi = Number(w[String(k)] ?? 1.0);
 
     const diff = pi - mui;
@@ -136,9 +132,8 @@ function updateProfile(params: {
   const D = computeDistance(domain, p, mu, sigma);
   const yHat = sigmoid(beta - D);
 
-  // learning + conservative sigma tightening
-  const eta = 0.06; // main step size
-  const lambda = 0.04; // sigma tighten rate
+  const eta = 0.06;
+  const lambda = 0.04;
 
   const nextMu: TasteVec = { ...mu };
   const nextSigma: TasteVec = { ...sigma };
@@ -151,16 +146,13 @@ function updateProfile(params: {
     const si = Math.max(0.08, Number(sigma[key] ?? 0.35));
     const wi = Number(w[String(k)] ?? 1.0);
 
-    // gradient step towards/away from p depending on (y - yHat)
     const grad = (y - yHat) * wi * (pi - mui) / (si * si + EPS);
     nextMu[key] = clamp01(mui + eta * grad);
 
-    // shrink sigma slightly when we learn something (surprise)
     const tighten = 1 - lambda * Math.abs(y - yHat);
     nextSigma[key] = Math.max(0.08, si * tighten);
   }
 
-  // update beta (user bias): handles “always rates high/low”
   const betaEta = 0.15;
   const nextBeta = beta + betaEta * (y - yHat);
 
@@ -203,7 +195,7 @@ export async function POST(req: Request) {
 
   const { data: vt, error: vtErr } = await supabase
     .from("variant_taste_vectors")
-    .select("p, domain")
+    .select("p, domain, product_slug, label")
     .eq("variant_id", body.variant_id)
     .maybeSingle();
 
@@ -213,20 +205,36 @@ export async function POST(req: Request) {
 
   if (vt?.p && (vt.domain === domain || !vt.domain)) {
     p = sanitizeVec(domain, vt.p as TasteVecDB, defaultP(domain));
+
+    // Optional: update metadata if provided and missing
+    if ((body.product_slug || body.label) && (!vt.product_slug || !vt.label)) {
+      const { error: metaErr } = await supabase
+        .from("variant_taste_vectors")
+        .update({
+          product_slug: body.product_slug ?? vt.product_slug ?? null,
+          label: body.label ?? vt.label ?? null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("variant_id", body.variant_id);
+
+      if (metaErr) {
+        return NextResponse.json({ error: metaErr.message }, { status: 400 });
+      }
+    }
   } else {
     // seed if missing
-await supabase.from("variant_taste_vectors").upsert(
-  {
-    variant_id: body.variant_id,
-    domain,
-    p,
-    confidence: 0.2,
-    product_slug: body.product_slug ?? null,
-    label: body.label ?? null,
-    updated_at: new Date().toISOString(),
-  },
-  { onConflict: "variant_id" }
-);
+    const { error: seedErr } = await supabase.from("variant_taste_vectors").upsert(
+      {
+        variant_id: body.variant_id,
+        domain,
+        p,
+        confidence: 0.2,
+        product_slug: body.product_slug ?? null,
+        label: body.label ?? null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "variant_id" }
+    );
 
     if (seedErr) {
       return NextResponse.json({ error: seedErr.message }, { status: 400 });
