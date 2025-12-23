@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "./BrewReviewClient.module.css";
 
 type Domain = "coffee" | "tea";
@@ -9,6 +9,21 @@ function formatMMSS(total: number) {
   const m = Math.floor(total / 60);
   const s = total % 60;
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+// --- user_key (samme som BrewClient) ---
+function getUserKey() {
+  if (typeof window === "undefined") return "server";
+  const existing = window.localStorage.getItem("brewnote_user_key");
+  if (existing) return existing;
+
+  const newKey =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `u_${Math.random().toString(16).slice(2)}_${Date.now()}`;
+
+  window.localStorage.setItem("brewnote_user_key", newKey);
+  return newKey;
 }
 
 // samme pseudo-variant-id logik som i BrewClient
@@ -56,6 +71,15 @@ type TopPick = {
   why?: string[];
 };
 
+type LatestReview = {
+  created_at?: string;
+  stars?: number;
+  quick?: "sour" | "balanced" | "bitter" | null;
+  note?: string | null;
+  method?: string | null;
+  seconds?: number | null;
+};
+
 export default function BrewReviewClient({
   type,
   slug,
@@ -81,7 +105,50 @@ export default function BrewReviewClient({
 
   const [topPick, setTopPick] = useState<TopPick | null>(null);
 
+  // latest state (for small hint)
+  const [latest, setLatest] = useState<LatestReview | null>(null);
+
   const backHref = slug ? `/coffees/${encodeURIComponent(slug)}` : "/";
+
+  // ✅ Prefill from latest review
+  useEffect(() => {
+    if (!slug) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const user_key = getUserKey();
+        const qs = new URLSearchParams({
+          user_key,
+          product_slug: slug,
+        });
+
+        const res = await fetch(`/api/review/latest?${qs.toString()}`, { method: "GET" });
+        const json = await res.json().catch(() => ({}));
+
+        if (!res.ok || !json?.ok || cancelled) return;
+
+        const r = (json.latest ?? null) as LatestReview | null;
+        if (!r) return;
+
+        setLatest(r);
+
+        // prefill rating/quick/note if exists
+        if (typeof r.stars === "number" && r.stars >= 1 && r.stars <= 5) setRating(r.stars);
+
+        if (r.quick === "sour" || r.quick === "balanced" || r.quick === "bitter") setQuick(r.quick);
+
+        if (typeof r.note === "string" && r.note.trim()) setNote(r.note.trim());
+      } catch {
+        // ignore
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
 
   async function saveReview() {
     if (rating === 0 || isSaving) return;
@@ -223,6 +290,13 @@ export default function BrewReviewClient({
             onChange={(e) => setNote(e.target.value)}
           />
         </label>
+
+        {/* small “last time” hint */}
+        {latest?.created_at ? (
+          <div style={{ marginTop: 6, fontSize: 12, opacity: 0.7 }}>
+            Sidste review: {new Date(latest.created_at).toLocaleDateString("da-DK")}
+          </div>
+        ) : null}
 
         {saveMsg ? <div style={{ marginTop: 10, fontSize: 13, opacity: 0.9 }}>{saveMsg}</div> : null}
 
